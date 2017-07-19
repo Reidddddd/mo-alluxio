@@ -28,6 +28,7 @@ import alluxio.underfs.options.DeleteOptions;
 import alluxio.underfs.options.FileLocationOptions;
 import alluxio.underfs.options.MkdirsOptions;
 import alluxio.underfs.options.OpenOptions;
+import alluxio.util.network.NetworkAddressUtils;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
@@ -97,6 +98,11 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
       // Set Hadoop UGI configuration to ensure UGI can be initialized by the shaded classes for
       // group service.
       UserGroupInformation.setConfiguration(hdfsConf);
+      if (UserGroupInformation.isSecurityEnabled()) {
+        connectFromMaster(
+            NetworkAddressUtils.getConnectHost(
+                NetworkAddressUtils.ServiceType.MASTER_RPC));
+      }
       mFileSystem = path.getFileSystem(hdfsConf);
     } catch (IOException e) {
       throw new RuntimeException(
