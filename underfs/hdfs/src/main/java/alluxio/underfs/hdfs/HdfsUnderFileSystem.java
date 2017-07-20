@@ -361,6 +361,12 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
 
   @Override
   public boolean mkdirs(String path, MkdirsOptions options) throws IOException {
+    if (UserGroupInformation.isSecurityEnabled()) {
+      UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+      options.setOwner(ugi.getShortUserName());
+      options.setGroup(ugi.getGroupNames()[0]);
+    }
+
     IOException te = null;
     RetryPolicy retryPolicy = new CountingRetry(MAX_TRY);
     while (retryPolicy.attemptRetry()) {
