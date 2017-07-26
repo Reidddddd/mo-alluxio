@@ -141,7 +141,7 @@ public final class LoginUser {
     try {
       login = createLoginContext(AuthType.KERBEROS_KEYTAB,
                                  subject,
-                                 User.class.getClassLoader(),
+                                 null,
                                  new LoginModuleConfiguration());
       login.login();
     } catch (LoginException e) {
@@ -165,7 +165,7 @@ public final class LoginUser {
     try {
       login = createLoginContext(AuthType.KERBEROS,
                                  subject,
-                                 User.class.getClassLoader(),
+                                 null,
                                  new LoginModuleConfiguration());
       login.login();
     } catch (LoginException e) {
