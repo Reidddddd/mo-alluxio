@@ -642,6 +642,10 @@ public class PropertyKey {
           "alluxio.security.group.provider.ShellBasedUnixGroupsMapping");
   public static final PropertyKey SECURITY_LOGIN_USERNAME =
       create(Name.SECURITY_LOGIN_USERNAME, null);
+  public static final PropertyKey SECURITY_KERBEROS_KEYTAB_FILE =
+      create(Name.SECURITY_KERBEROS_KEYTAB_FILE, null);
+  public static final PropertyKey SECURITY_KERBEROS_PRINCIPAL =
+      create(Name.SECURITY_KERBEROS_PRINCIPAL, null);
 
   //
   // Mesos and Yarn related properties
@@ -1126,6 +1130,10 @@ public class PropertyKey {
     public static final String SECURITY_GROUP_MAPPING_CLASS =
         "alluxio.security.group.mapping.class";
     public static final String SECURITY_LOGIN_USERNAME = "alluxio.security.login.username";
+    public static final String SECURITY_KERBEROS_KEYTAB_FILE =
+        "alluxio.security.kerberos.keytab.file";
+    public static final String SECURITY_KERBEROS_PRINCIPAL =
+        "alluxio.security.kerberos.principal";
 
     private Name() {} // prevent instantiation
   }

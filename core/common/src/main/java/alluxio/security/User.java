@@ -21,7 +21,8 @@ import javax.annotation.concurrent.ThreadSafe;
  */
 @ThreadSafe
 public final class User implements Principal {
-  private final String mName;
+  private final String mFullName;
+  private final String mShortName;
 
   // TODO(dong): add more attributes and methods for supporting Kerberos
 
@@ -31,12 +32,21 @@ public final class User implements Principal {
    * @param name the name of the user
    */
   public User(String name) {
-    mName = name;
+    mShortName = new KerberosUser(name).getServiceName();
+    mFullName = name;
   }
 
   @Override
   public String getName() {
-    return mName;
+    return mFullName;
+  }
+
+  /**
+   * Short name of user.
+   * @return short name
+   */
+  public String getShortName() {
+    return mShortName;
   }
 
   @Override
@@ -48,16 +58,16 @@ public final class User implements Principal {
       return false;
     }
     User that = (User) o;
-    return mName.equals(that.mName);
+    return mFullName.equals(that.mFullName);
   }
 
   @Override
   public int hashCode() {
-    return mName.hashCode();
+    return mFullName.hashCode();
   }
 
   @Override
   public String toString() {
-    return mName;
+    return mFullName;
   }
 }
