@@ -169,7 +169,7 @@ public final class LoginUser {
                                  new LoginModuleConfiguration());
       login.login();
     } catch (LoginException e) {
-      throw new RuntimeException("Login failed.");
+      throw new RuntimeException("Login failed.", e);
     }
 
     checkLogin(subject);
