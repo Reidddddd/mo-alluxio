@@ -11,8 +11,11 @@
 
 package alluxio.security.login;
 
+import alluxio.PropertyKey;
 import alluxio.security.User;
 import alluxio.security.authentication.AuthType;
+import alluxio.util.KerberosUtils;
+import alluxio.util.OSUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -35,6 +38,39 @@ import javax.security.auth.login.Configuration;
 public final class LoginModuleConfiguration extends Configuration {
 
   private static final Map<String, String> EMPTY_JAAS_OPTIONS = new HashMap<>();
+  private static final Map<String, String> KEYTAB_KERBEROS_OPTIONS = new HashMap<>();
+
+  static {
+    if (OSUtils.IBM_JAVA) {
+      KEYTAB_KERBEROS_OPTIONS.put("credsType", "both");
+    } else {
+      KEYTAB_KERBEROS_OPTIONS.put("doNotPrompt", "true");
+      KEYTAB_KERBEROS_OPTIONS.put("useKeyTab", "true");
+      KEYTAB_KERBEROS_OPTIONS.put("storeKey", "true");
+    }
+    KEYTAB_KERBEROS_OPTIONS.put("refreshKrb5Config", "true");
+  }
+
+  private static final Map<String, String> USER_KERBEROS_OPTIONS = new HashMap<>();
+
+  static {
+    if (OSUtils.IBM_JAVA) {
+      USER_KERBEROS_OPTIONS.put("useDefaultCcache", "true");
+    } else {
+      USER_KERBEROS_OPTIONS.put("doNotPrompt", "true");
+      USER_KERBEROS_OPTIONS.put("useTicketCache", "true");
+    }
+    String ticketCache = System.getenv("KRB5CCNAME");
+    if (ticketCache != null) {
+      if (OSUtils.IBM_JAVA) {
+        // The first value searched when "useDefaultCcache" is used.
+        System.setProperty("KRB5CCNAME", ticketCache);
+      } else {
+        USER_KERBEROS_OPTIONS.put("ticketCache", ticketCache);
+      }
+    }
+    USER_KERBEROS_OPTIONS.put("renewTGT", "true");
+  }
 
   /** Login module that allows a user name provided by OS. */
   private static final AppConfigurationEntry OS_SPECIFIC_LOGIN =
@@ -49,9 +85,17 @@ public final class LoginModuleConfiguration extends Configuration {
   private static final AppConfigurationEntry ALLUXIO_LOGIN = new AppConfigurationEntry(
       AlluxioLoginModule.class.getName(), LoginModuleControlFlag.REQUIRED, EMPTY_JAAS_OPTIONS);
 
-  // TODO(dong): add Kerberos_LOGIN module
-  // private static final AppConfigurationEntry KERBEROS_LOGIN = ...
+  /** Kerberos login module for a user. */
+  private static final AppConfigurationEntry KERBEROS_LOGIN =
+      new AppConfigurationEntry(KerberosUtils.getKerberosLoginModuleName(),
+                                LoginModuleControlFlag.OPTIONAL,
+                                USER_KERBEROS_OPTIONS);
 
+  /** Kerberos login module for a server(keytab). */
+  private static final AppConfigurationEntry KERBEROS_KEYTAB_LOGIN =
+      new AppConfigurationEntry(KerberosUtils.getKerberosLoginModuleName(),
+                                LoginModuleControlFlag.REQUIRED,
+                                KEYTAB_KERBEROS_OPTIONS);
   /**
    * In the {@link AuthType#SIMPLE} mode, JAAS first tries to retrieve the user name set by the
    * application with {@link AppLoginModule}. Upon failure, it uses the OS specific login module to
@@ -61,8 +105,17 @@ public final class LoginModuleConfiguration extends Configuration {
   private static final AppConfigurationEntry[] SIMPLE =
       new AppConfigurationEntry[] {APP_LOGIN, OS_SPECIFIC_LOGIN, ALLUXIO_LOGIN};
 
-  // TODO(dong): add Kerberos mode
-  // private static final AppConfigurationEntry[] KERBEROS = ...
+  /**
+   * {@link AuthType#KERBEROS} mode.
+   */
+  private static final AppConfigurationEntry[] KERBEROS =
+      new AppConfigurationEntry[] { OS_SPECIFIC_LOGIN, KERBEROS_LOGIN, ALLUXIO_LOGIN };
+
+  /**
+   * {@link AuthType#KERBEROS_KEYTAB} mode for long running job.
+   */
+  private static final AppConfigurationEntry[] KERBEROS_KEYTAB =
+      new AppConfigurationEntry[] { KERBEROS_KEYTAB_LOGIN, ALLUXIO_LOGIN };
 
   /**
    * Constructs a new {@link LoginModuleConfiguration}.
@@ -75,9 +128,23 @@ public final class LoginModuleConfiguration extends Configuration {
         || appName.equalsIgnoreCase(AuthType.CUSTOM.getAuthName())) {
       return SIMPLE;
     } else if (appName.equalsIgnoreCase(AuthType.KERBEROS.getAuthName())) {
-      // TODO(dong): return KERBEROS;
-      throw new UnsupportedOperationException("Kerberos is not supported currently.");
+      return KERBEROS;
+    } else if (appName.equalsIgnoreCase(AuthType.KERBEROS_KEYTAB.getAuthName())) {
+      if (OSUtils.IBM_JAVA) {
+        KEYTAB_KERBEROS_OPTIONS.put("useKeytab",
+            addFilePrefix(alluxio.Configuration.get(PropertyKey.SECURITY_KERBEROS_KEYTAB_FILE)));
+      } else {
+        KEYTAB_KERBEROS_OPTIONS.put("keyTab",
+            alluxio.Configuration.get(PropertyKey.SECURITY_KERBEROS_KEYTAB_FILE));
+      }
+      KEYTAB_KERBEROS_OPTIONS.put("principal",
+          alluxio.Configuration.get(PropertyKey.SECURITY_KERBEROS_PRINCIPAL));
+      return KERBEROS_KEYTAB;
     }
     return null;
+  }
+
+  private static String addFilePrefix(String keytab) {
+    return keytab.startsWith("file://") ? keytab : "file://" + keytab;
   }
 }

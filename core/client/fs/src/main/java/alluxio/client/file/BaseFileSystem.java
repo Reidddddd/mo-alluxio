@@ -40,15 +40,19 @@ import alluxio.exception.status.FailedPreconditionException;
 import alluxio.exception.status.InvalidArgumentException;
 import alluxio.exception.status.NotFoundException;
 import alluxio.exception.status.UnavailableException;
+import alluxio.security.LoginUser;
+import alluxio.util.KerberosUtils;
 import alluxio.wire.LoadMetadataType;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.security.PrivilegedAction;
 import java.util.List;
 
 import javax.annotation.concurrent.ThreadSafe;
+import javax.security.auth.Subject;
 
 /**
 * Default implementation of the {@link FileSystem} interface. Developers can extend this class
@@ -67,6 +71,16 @@ public class BaseFileSystem implements FileSystem {
    * @return a {@link BaseFileSystem}
    */
   public static BaseFileSystem get(FileSystemContext context) {
+    if (KerberosUtils.isKrbEnable()) {
+      final FileSystemContext fsc = context;
+      LoginUser.loginFromTicketCache();
+      Subject.doAs(LoginUser.getSubject(), new PrivilegedAction<BaseFileSystem>() {
+        @Override
+        public BaseFileSystem run() {
+          return new BaseFileSystem(fsc);
+        }
+      });
+    }
     return new BaseFileSystem(context);
   }
 

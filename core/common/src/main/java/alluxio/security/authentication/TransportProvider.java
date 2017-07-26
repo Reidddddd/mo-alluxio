@@ -41,7 +41,6 @@ public interface TransportProvider {
      * {@link AuthType#NOSASL}, return an instance of {@link NoSaslTransportProvider}; for
      * {@link AuthType#SIMPLE} or {@link AuthType#CUSTOM}, return an instance of
      * {@link PlainSaslTransportProvider}.
-     *
      * @return the generated {@link TransportProvider}
      */
     public static TransportProvider create() {
@@ -54,8 +53,7 @@ public interface TransportProvider {
         case CUSTOM:
           return new PlainSaslTransportProvider();
         case KERBEROS:
-          throw new UnsupportedOperationException(
-              "getClientTransport: Kerberos is not supported currently.");
+          return new GssSaslTransportProvider();
         default:
           throw new UnsupportedOperationException(
               "getClientTransport: Unsupported authentication type: " + authType.getAuthName());

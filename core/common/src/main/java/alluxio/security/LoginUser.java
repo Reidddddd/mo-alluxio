@@ -17,7 +17,12 @@ import alluxio.exception.status.UnauthenticatedException;
 import alluxio.security.authentication.AuthType;
 import alluxio.security.login.AppLoginModule;
 import alluxio.security.login.LoginModuleConfiguration;
+import alluxio.util.KerberosUtils;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.security.Principal;
 import java.util.Set;
 
 import javax.annotation.concurrent.ThreadSafe;
@@ -36,11 +41,32 @@ import javax.security.auth.login.LoginException;
  */
 @ThreadSafe
 public final class LoginUser {
+  private static final Logger LOG = LoggerFactory.getLogger(LoginUser.class);
 
   /** User instance of the login user in Alluxio client process. */
   private static User sLoginUser;
 
+  /** User entity. */
+  private static Subject sSubject;
+
   private LoginUser() {} // prevent instantiation
+
+  /**
+   * Set user's subject.
+   * @param subject user's subject
+   */
+  public static void setUserSubject(Subject subject) {
+    sSubject = subject;
+    sLoginUser = subject.getPrincipals(User.class).iterator().next();
+  }
+
+  /**
+   * Get user's subject.
+   * @return subject
+   */
+  public static Subject getSubject() {
+    return sSubject;
+  }
 
   /**
    * Gets current singleton login user. This method is called to identify the singleton user who
@@ -98,14 +124,78 @@ public final class LoginUser {
   }
 
   /**
+   * Login as a principal specified in config.
+   * @param keytab keytab file location
+   * @param principal principal
+   */
+  public static void loginFromKeytab(final String keytab, final String principal) {
+    if (!KerberosUtils.isKrbEnable()) {
+      return;
+    }
+    if (keytab == null || keytab.length() == 0) {
+      throw new RuntimeException("Running in secure mode, but config doesn't have a keytab");
+    }
+
+    Subject subject = new Subject();
+    LoginContext login;
+    try {
+      login = createLoginContext(AuthType.KERBEROS_KEYTAB,
+                                 subject,
+                                 User.class.getClassLoader(),
+                                 new LoginModuleConfiguration());
+      login.login();
+    } catch (LoginException e) {
+      throw new RuntimeException(String.format("Login failed for user %s.", principal));
+    }
+    checkLogin(subject);
+    setUserSubject(subject);
+    LOG.info("Login successfully for user {} using keytab file {}.", principal, keytab);
+  }
+
+  /**
+   * Login using ticket cache, mainly from client side.
+   */
+  public static void loginFromTicketCache() {
+    if (!KerberosUtils.isKrbEnable()) {
+      return;
+    }
+
+    Subject subject = new Subject();
+    LoginContext login;
+    try {
+      login = createLoginContext(AuthType.KERBEROS,
+                                 subject,
+                                 User.class.getClassLoader(),
+                                 new LoginModuleConfiguration());
+      login.login();
+    } catch (LoginException e) {
+      throw new RuntimeException("Login failed.");
+    }
+
+    checkLogin(subject);
+    setUserSubject(subject);
+  }
+
+  private static void checkLogin(Subject subject) {
+    Set<Principal> princs = subject.getPrincipals();
+    if (princs.isEmpty()) {
+      throw new RuntimeException("No login principals found!");
+    }
+    if (princs.size() != 1) {
+      LOG.warn("Found more than one principal.");
+    }
+  }
+
+  /**
    * Checks whether Alluxio is running in secure mode, such as {@link AuthType#SIMPLE},
    * {@link AuthType#KERBEROS}, {@link AuthType#CUSTOM}.
    *
    * @param authType the authentication type in configuration
    */
   private static void checkSecurityEnabled(AuthType authType) {
-    // TODO(dong): add Kerberos condition check.
-    if (authType != AuthType.SIMPLE && authType != AuthType.CUSTOM) {
+    if (authType != AuthType.SIMPLE
+        && authType != AuthType.CUSTOM
+        && authType != AuthType.KERBEROS) {
       throw new UnsupportedOperationException("User is not supported in " + authType.getAuthName()
           + " mode");
     }
