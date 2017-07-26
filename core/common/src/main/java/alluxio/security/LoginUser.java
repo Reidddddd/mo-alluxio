@@ -145,8 +145,8 @@ public final class LoginUser {
                                  new LoginModuleConfiguration());
       login.login();
     } catch (LoginException e) {
-      throw new RuntimeException(String.format("Login failed for user: %s, reason: %s",
-        principal, e.getMessage()));
+      throw new RuntimeException(String.format("Login failed for user: %s, cause: %s, msg: %s",
+        principal, e.getCause(), e.getMessage()));
     }
     checkLogin(subject);
     setUserSubject(subject);
@@ -171,7 +171,8 @@ public final class LoginUser {
       login.login();
     } catch (LoginException e) {
       throw new RuntimeException(
-        String.format("Login failed using ticket cache, reason: %s", e.getMessage()));
+        String.format("Login failed using ticket cache, cause: %s, msg: %s",
+          e.getCause(), e.getMessage()));
     }
 
     checkLogin(subject);
