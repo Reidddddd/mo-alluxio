@@ -12,6 +12,7 @@
 package alluxio.security.login;
 
 import alluxio.security.User;
+import alluxio.util.KerberosUtils;
 
 import java.security.Principal;
 import java.util.Map;
@@ -20,6 +21,7 @@ import java.util.Set;
 import javax.annotation.concurrent.NotThreadSafe;
 import javax.security.auth.Subject;
 import javax.security.auth.callback.CallbackHandler;
+import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.login.LoginException;
 import javax.security.auth.spi.LoginModule;
 
@@ -70,6 +72,13 @@ public final class AlluxioLoginModule implements LoginModule {
     return true;
   }
 
+  private <T extends Principal> T getCanonicalUser(Class<T> cls) {
+    for(T user: mSubject.getPrincipals(cls)) {
+      return user;
+    }
+    return null;
+  }
+
   /**
    * Commits the authentication (second phase).
    *
@@ -89,8 +98,10 @@ public final class AlluxioLoginModule implements LoginModule {
 
     Principal user = null;
 
-    // TODO(dong): get a Kerberos user if we are using Kerberos.
-    // user = getKerberosUser();
+    if (KerberosUtils.isKrbEnable()) {
+      user = getCanonicalUser(KerberosPrincipal.class);
+      return true;
+    }
 
     // get a OS user
     if (user == null) {

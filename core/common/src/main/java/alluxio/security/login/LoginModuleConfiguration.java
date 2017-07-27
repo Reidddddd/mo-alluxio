@@ -96,6 +96,7 @@ public final class LoginModuleConfiguration extends Configuration {
       new AppConfigurationEntry(KerberosUtils.getKerberosLoginModuleName(),
                                 LoginModuleControlFlag.REQUIRED,
                                 KEYTAB_KERBEROS_OPTIONS);
+
   /**
    * In the {@link AuthType#SIMPLE} mode, JAAS first tries to retrieve the user name set by the
    * application with {@link AppLoginModule}. Upon failure, it uses the OS specific login module to
