@@ -100,7 +100,6 @@ public final class AlluxioLoginModule implements LoginModule {
 
     if (KerberosUtils.isKrbEnable()) {
       user = getCanonicalUser(KerberosPrincipal.class);
-      return true;
     }
 
     // get a OS user
