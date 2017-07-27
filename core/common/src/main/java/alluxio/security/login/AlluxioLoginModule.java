@@ -73,7 +73,7 @@ public final class AlluxioLoginModule implements LoginModule {
   }
 
   private <T extends Principal> T getCanonicalUser(Class<T> cls) {
-    for(T user: mSubject.getPrincipals(cls)) {
+    for (T user : mSubject.getPrincipals(cls)) {
       return user;
     }
     return null;
