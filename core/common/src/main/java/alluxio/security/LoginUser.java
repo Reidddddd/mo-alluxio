@@ -19,10 +19,16 @@ import alluxio.security.login.AppLoginModule;
 import alluxio.security.login.LoginModuleConfiguration;
 import alluxio.util.KerberosUtils;
 
+import org.apache.thrift.transport.TTransportException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.security.Principal;
+import java.security.PrivilegedAction;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Set;
 
 import javax.annotation.concurrent.ThreadSafe;
@@ -151,6 +157,48 @@ public final class LoginUser {
     checkLogin(subject);
     setUserSubject(subject);
     LOG.info("Login successfully for user {} using keytab file {}.", principal, keytab);
+  }
+
+  /**
+   * Run the given action as the user.
+   * @param <T> the return type of the run method
+   * @param action the method to execute
+   * @return the value from the run method
+   */
+  public static <T> T doAs(PrivilegedAction<T> action) {
+    return Subject.doAs(sSubject, action);
+  }
+
+  /**
+   * Run the given action as the user.
+   * @param <T> the return type of the run method
+   * @param action the method to execute
+   * @return the value from the run method
+   * @throws IOException
+   * @throws TTransportException
+   * @throws InterruptedException
+   */
+  public static <T> T doAs(PrivilegedExceptionAction<T> action)
+      throws IOException, TTransportException {
+    try {
+      return Subject.doAs(sSubject, action);
+    } catch (PrivilegedActionException pae) {
+      Throwable cause = pae.getCause();
+      if (cause == null) {
+        throw new RuntimeException("PrivilegedActionException with no underlying cause. User ["
+            + sLoginUser + "]" + ": " + pae, pae);
+      } else if (cause instanceof IOException) {
+        throw (IOException) cause;
+      } else if (cause instanceof TTransportException) {
+        throw (TTransportException) cause;
+      } else if (cause instanceof Error) {
+        throw (Error) cause;
+      } else if (cause instanceof RuntimeException) {
+        throw (RuntimeException) cause;
+      } else {
+        throw new UndeclaredThrowableException(cause);
+      }
+    }
   }
 
   /**

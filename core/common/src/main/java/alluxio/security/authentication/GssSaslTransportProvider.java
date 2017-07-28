@@ -21,8 +21,6 @@ import org.apache.thrift.transport.TSaslClientTransport;
 import org.apache.thrift.transport.TSaslServerTransport;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
@@ -38,7 +36,6 @@ import javax.security.sasl.SaslException;
  * Authentication type is {@link AuthType#KERBEROS}.
  */
 public class GssSaslTransportProvider implements TransportProvider {
-  private static final Logger LOG = LoggerFactory.getLogger(GssSaslTransportProvider.class);
 
   static {
     Security.addProvider(new KerberosSaslServerProvider());
@@ -69,25 +66,17 @@ public class GssSaslTransportProvider implements TransportProvider {
         TransportProviderUtils.createThriftSocket(serverAddress, mSocketTimeoutMs);
     final User user = LoginUser.get();
     final String serverHost = serverAddress.getHostName();
-    return Subject.doAs(LoginUser.getSubject(), new PrivilegedAction<TTransport>() {
-      @Override
-      public TTransport run() {
-        LOG.info("Creating sasl client, client = {}; service host = {}",
-            user.getName(), serverHost);
-        try {
-          return new TSaslClientTransport(KerberosSaslServerProvider.MECHANISM,
-                                          user.getName(),
-                                          "alluxio",
-                                          serverHost,
-                                          null,
-                                          null,
-                                          wrappedTransport);
-        } catch (SaslException e) {
-          e.printStackTrace();
-        }
-        return null;
-      }
-    });
+    try {
+      return new TSaslClientTransport(KerberosSaslServerProvider.MECHANISM,
+                                      user.getName(),
+                                      "alluxio",
+                                      serverHost,
+                                      null,
+                                      null,
+                                      wrappedTransport);
+    } catch (SaslException e) {
+      throw new UnauthenticatedException(e);
+    }
   }
 
   @Override

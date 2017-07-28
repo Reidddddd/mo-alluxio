@@ -20,6 +20,7 @@ import alluxio.exception.status.UnavailableException;
 import alluxio.exception.status.UnimplementedException;
 import alluxio.retry.ExponentialBackoffRetry;
 import alluxio.retry.RetryPolicy;
+import alluxio.security.LoginUser;
 import alluxio.security.authentication.TransportProvider;
 import alluxio.thrift.AlluxioService;
 import alluxio.thrift.AlluxioTException;
@@ -36,6 +37,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.security.PrivilegedExceptionAction;
 import java.util.regex.Pattern;
 
 import javax.annotation.concurrent.ThreadSafe;
@@ -166,7 +168,7 @@ public abstract class AbstractClient implements Client {
     disconnect();
     Preconditions.checkState(!mClosed, "Client is closed, will not try to connect.");
 
-    RetryPolicy retryPolicy =
+    final RetryPolicy retryPolicy =
         new ExponentialBackoffRetry(BASE_SLEEP_MS, MAX_SLEEP_MS, RPC_MAX_NUM_RETRY);
     while (!mClosed) {
       mAddress = getAddress();
@@ -177,7 +179,13 @@ public abstract class AbstractClient implements Client {
           new TBinaryProtocol(mTransportProvider.getClientTransport(mParentSubject, mAddress));
       mProtocol = new TMultiplexedProtocol(binaryProtocol, getServiceName());
       try {
-        mProtocol.getTransport().open();
+        LoginUser.doAs(new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws IOException, TTransportException {
+            mProtocol.getTransport().open();
+            return null;
+          }
+        });
         LOG.info("Client registered with {} @ {}", getServiceName(), mAddress);
         mConnected = true;
         afterConnect();

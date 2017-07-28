@@ -52,7 +52,6 @@ import java.security.PrivilegedAction;
 import java.util.List;
 
 import javax.annotation.concurrent.ThreadSafe;
-import javax.security.auth.Subject;
 
 /**
 * Default implementation of the {@link FileSystem} interface. Developers can extend this class
@@ -74,7 +73,7 @@ public class BaseFileSystem implements FileSystem {
     if (KerberosUtils.isKrbEnable()) {
       final FileSystemContext fsc = context;
       LoginUser.loginFromTicketCache();
-      Subject.doAs(LoginUser.getSubject(), new PrivilegedAction<BaseFileSystem>() {
+      LoginUser.doAs(new PrivilegedAction<BaseFileSystem>() {
         @Override
         public BaseFileSystem run() {
           return new BaseFileSystem(fsc);
