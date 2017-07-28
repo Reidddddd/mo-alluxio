@@ -92,7 +92,7 @@ public class GssSaslTransportProvider implements TransportProvider {
     final Map<String, String> props = new HashMap<>();
     props.put(Sasl.SERVER_AUTH, "true");
     props.put(Sasl.QOP, "auth");
-    return Subject.doAs(LoginUser.getSubject(), new PrivilegedAction<TTransportFactory>() {
+    return LoginUser.doAs(new PrivilegedAction<TTransportFactory>() {
       @Override
       public TTransportFactory run() {
         saslFactory.addServerDefinition(KerberosSaslServerProvider.MECHANISM,

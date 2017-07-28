@@ -15,6 +15,7 @@ import alluxio.Configuration;
 import alluxio.PropertyKey;
 import alluxio.exception.status.UnauthenticatedException;
 import alluxio.security.authentication.AuthType;
+import alluxio.security.login.AlluxioLoginModule;
 import alluxio.security.login.AppLoginModule;
 import alluxio.security.login.LoginModuleConfiguration;
 import alluxio.util.KerberosUtils;
@@ -147,7 +148,7 @@ public final class LoginUser {
     try {
       login = createLoginContext(AuthType.KERBEROS_KEYTAB,
                                  subject,
-                                 null,
+                                 AlluxioLoginModule.class.getClassLoader(),
                                  new LoginModuleConfiguration());
       login.login();
     } catch (LoginException e) {
@@ -214,7 +215,7 @@ public final class LoginUser {
     try {
       login = createLoginContext(AuthType.KERBEROS,
                                  subject,
-                                 null,
+                                 AlluxioLoginModule.class.getClassLoader(),
                                  new LoginModuleConfiguration());
       login.login();
     } catch (LoginException e) {
