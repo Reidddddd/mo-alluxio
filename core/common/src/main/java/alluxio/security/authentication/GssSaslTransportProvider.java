@@ -23,7 +23,6 @@ import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportFactory;
 
 import java.net.InetSocketAddress;
-import java.security.PrivilegedAction;
 import java.security.Security;
 import java.util.HashMap;
 import java.util.Map;
@@ -49,14 +48,12 @@ public class GssSaslTransportProvider implements TransportProvider {
    */
   public GssSaslTransportProvider() {
     mSocketTimeoutMs = Configuration.getInt(PropertyKey.SECURITY_AUTHENTICATION_SOCKET_TIMEOUT_MS);
-    LoginUser.loginFromKeytab(Configuration.get(PropertyKey.SECURITY_KERBEROS_KEYTAB_FILE),
-                              Configuration.get(PropertyKey.SECURITY_KERBEROS_PRINCIPAL));
   }
 
   @Override
   public TTransport getClientTransport(InetSocketAddress serverAddress)
       throws UnauthenticatedException {
-    return getClientTransport(LoginUser.getSubject(), serverAddress);
+    return getClientTransport(null, serverAddress);
   }
 
   @Override
@@ -65,12 +62,11 @@ public class GssSaslTransportProvider implements TransportProvider {
     final TTransport wrappedTransport =
         TransportProviderUtils.createThriftSocket(serverAddress, mSocketTimeoutMs);
     final User user = LoginUser.get();
-    final String serverHost = serverAddress.getHostName();
     try {
       return new TSaslClientTransport(KerberosSaslServerProvider.MECHANISM,
                                       user.getName(),
                                       "alluxio",
-                                      serverHost,
+                                      serverAddress.getHostName(),
                                       null,
                                       null,
                                       wrappedTransport);
@@ -88,20 +84,14 @@ public class GssSaslTransportProvider implements TransportProvider {
   public TTransportFactory getServerTransportFactory(Runnable runnable, String serverName)
       throws SaslException {
     final TSaslServerTransport.Factory saslFactory = new TSaslServerTransport.Factory();
-    final String serverHost = serverName;
     final Map<String, String> props = new HashMap<>();
     props.put(Sasl.SERVER_AUTH, "true");
     props.put(Sasl.QOP, "auth");
-    return LoginUser.doAs(new PrivilegedAction<TTransportFactory>() {
-      @Override
-      public TTransportFactory run() {
-        saslFactory.addServerDefinition(KerberosSaslServerProvider.MECHANISM,
-                                        "alluxio",
-                                        serverHost,
-                                        props,
-                                        new GssKrbCallbackHandler());
-        return saslFactory;
-      }
-    });
+    saslFactory.addServerDefinition(KerberosSaslServerProvider.MECHANISM,
+                                    "alluxio",
+                                    serverName,
+                                    props,
+                                    null);
+    return saslFactory;
   }
 }

@@ -19,10 +19,12 @@ import alluxio.ServiceUtils;
 import alluxio.metrics.MetricsSystem;
 import alluxio.metrics.sink.MetricsServlet;
 import alluxio.network.ChannelType;
+import alluxio.security.LoginUser;
 import alluxio.security.authentication.TransportProvider;
 import alluxio.underfs.UfsManager;
 import alluxio.underfs.WorkerUfsManager;
 import alluxio.util.CommonUtils;
+import alluxio.util.KerberosUtils;
 import alluxio.util.WaitForOptions;
 import alluxio.util.network.NetworkAddressUtils;
 import alluxio.util.network.NetworkAddressUtils.ServiceType;
@@ -46,6 +48,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -101,6 +104,12 @@ public final class AlluxioWorkerProcess implements WorkerProcess {
    */
   AlluxioWorkerProcess() {
     try {
+      // Login from keytab if kerberos enabled.
+      if (KerberosUtils.isKrbEnable()) {
+        LoginUser.loginFromKeytab(Configuration.get(PropertyKey.WORKER_KEYTAB_FILE),
+                                  Configuration.get(PropertyKey.WORKER_PRINCIPAL));
+      }
+
       mStartTimeMs = System.currentTimeMillis();
       mUfsManager = new WorkerUfsManager();
       mRegistry = new WorkerRegistry();
@@ -223,7 +232,13 @@ public final class AlluxioWorkerProcess implements WorkerProcess {
 
     // Start serving RPC, this will block
     LOG.info("{} version {} started @ {}", this, RuntimeConstants.VERSION, mRpcAddress);
-    mThriftServer.serve();
+    LoginUser.doAs(new PrivilegedAction<Void>() {
+      @Override
+      public Void run() {
+        mThriftServer.serve();
+        return null;
+      }
+    });
     LOG.info("{} version {} ended @ {}", this, RuntimeConstants.VERSION, mRpcAddress);
   }
 

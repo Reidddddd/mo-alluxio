@@ -18,9 +18,11 @@ import alluxio.RuntimeConstants;
 import alluxio.master.journal.Journal;
 import alluxio.metrics.MetricsSystem;
 import alluxio.metrics.sink.MetricsServlet;
+import alluxio.security.LoginUser;
 import alluxio.security.authentication.TransportProvider;
 import alluxio.thrift.MetaMasterClientService;
 import alluxio.util.CommonUtils;
+import alluxio.util.KerberosUtils;
 import alluxio.util.WaitForOptions;
 import alluxio.util.network.NetworkAddressUtils;
 import alluxio.util.network.NetworkAddressUtils.ServiceType;
@@ -44,6 +46,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.security.PrivilegedAction;
 import java.util.Map;
 
 import javax.annotation.concurrent.NotThreadSafe;
@@ -121,6 +124,12 @@ public class AlluxioMasterProcess implements MasterProcess {
             this + " rpc port is only allowed to be zero in test mode.");
         Preconditions.checkState(Configuration.getInt(PropertyKey.MASTER_WEB_PORT) > 0,
             this + " web port is only allowed to be zero in test mode.");
+      }
+
+      // Login from keytab if kerberos is enable.
+      if (KerberosUtils.isKrbEnable()) {
+        LoginUser.loginFromKeytab(Configuration.get(PropertyKey.MASTER_KEYTAB_KEY_FILE),
+                                  Configuration.get(PropertyKey.MASTER_PRINCIPAL));
       }
 
       mTransportProvider = TransportProvider.Factory.create();
@@ -319,7 +328,13 @@ public class AlluxioMasterProcess implements MasterProcess {
     // start thrift rpc server
     mIsServing = true;
     mStartTimeMs = System.currentTimeMillis();
-    mThriftServer.serve();
+    LoginUser.doAs(new PrivilegedAction<Void>() {
+      @Override
+      public Void run() {
+        mThriftServer.serve();
+        return null;
+      }
+    });
   }
 
   /**
