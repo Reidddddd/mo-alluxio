@@ -91,7 +91,7 @@ public class GssSaslTransportProvider implements TransportProvider {
                                     "alluxio",
                                     serverName,
                                     props,
-                                    null);
+                                    new GssKrbCallbackHandler());
     return saslFactory;
   }
 }
