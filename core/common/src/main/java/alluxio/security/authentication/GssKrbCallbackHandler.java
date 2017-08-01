@@ -47,6 +47,7 @@ public class GssKrbCallbackHandler implements CallbackHandler {
       }
       if (ac.isAuthorized()) {
         ac.setAuthorizedID(authorizationID);
+        AuthenticatedClientUser.set(ac.getAuthorizedID());
       }
     }
   }
