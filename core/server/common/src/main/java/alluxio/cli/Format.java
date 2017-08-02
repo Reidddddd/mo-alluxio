@@ -16,6 +16,7 @@ import alluxio.PropertyKey;
 import alluxio.RuntimeConstants;
 import alluxio.ServiceUtils;
 import alluxio.master.journal.Journal;
+import alluxio.security.LoginUser;
 import alluxio.util.io.FileUtils;
 import alluxio.util.io.PathUtils;
 
@@ -94,6 +95,8 @@ public final class Format {
     switch (mode) {
       case MASTER:
         String masterJournal = Configuration.get(PropertyKey.MASTER_JOURNAL_FOLDER);
+        LoginUser.loginFromKeytab(Configuration.get(PropertyKey.MASTER_KEYTAB_KEY_FILE),
+                                  Configuration.get(PropertyKey.MASTER_PRINCIPAL));
         LOG.info("MASTER JOURNAL: {}", masterJournal);
         Journal.Factory factory;
         try {
@@ -107,6 +110,8 @@ public final class Format {
         break;
       case WORKER:
         String workerDataFolder = Configuration.get(PropertyKey.WORKER_DATA_FOLDER);
+        LoginUser.loginFromKeytab(Configuration.get(PropertyKey.WORKER_KEYTAB_FILE),
+                                  Configuration.get(PropertyKey.WORKER_PRINCIPAL));
         int storageLevels = Configuration.getInt(PropertyKey.WORKER_TIERED_STORE_LEVELS);
         for (int level = 0; level < storageLevels; level++) {
           PropertyKey tierLevelDirPath =

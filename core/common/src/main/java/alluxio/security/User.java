@@ -38,7 +38,7 @@ public final class User implements Principal {
 
   @Override
   public String getName() {
-    return mShortName != null ? mShortName : mFullName;
+    return mFullName;
   }
 
   /**
