@@ -15,6 +15,8 @@ import alluxio.Configuration;
 import alluxio.PropertyKey;
 import alluxio.security.authentication.AuthType;
 
+import java.lang.reflect.Method;
+
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
@@ -26,6 +28,31 @@ public final class KerberosUtils {
    * Prevent initialization.
    */
   private KerberosUtils() {}
+
+  /**
+   * Get default realm.
+   * @return name of realm
+   */
+  public static String getDefaultRealm() {
+    Object kerbConf;
+    Class<?> classRef;
+    Method getInstanceMethod;
+    Method getDefaultRealmMethod;
+    try {
+      if (OSUtils.IBM_JAVA) {
+        classRef = Class.forName("com.ibm.security.krb5.internal.Config");
+      } else {
+        classRef = Class.forName("sun.security.krb5.Config");
+      }
+      getInstanceMethod = classRef.getMethod("getInstance", new Class[0]);
+      kerbConf = getInstanceMethod.invoke(classRef, new Object[0]);
+      getDefaultRealmMethod = classRef.getDeclaredMethod("getDefaultRealm", new Class[0]);
+      return (String) getDefaultRealmMethod.invoke(kerbConf, new Object[0]);
+    } catch (Exception e) {
+      // return "" in this case.
+    }
+    return "";
+  }
 
   /**
    * If kerberos is enabled.
