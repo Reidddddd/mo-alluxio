@@ -15,7 +15,6 @@ import alluxio.AlluxioURI;
 import alluxio.PropertyKey;
 import alluxio.retry.CountingRetry;
 import alluxio.retry.RetryPolicy;
-import alluxio.security.LoginUser;
 import alluxio.underfs.AtomicFileOutputStream;
 import alluxio.underfs.AtomicFileOutputStreamCallback;
 import alluxio.underfs.BaseUnderFileSystem;
@@ -41,6 +40,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -96,10 +96,18 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
     final Path path = new Path(ufsUri.toString());
     final Configuration config = hdfsConf;
     try {
-      mFileSystem = LoginUser.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      // Set Hadoop UGI configuration to ensure UGI can be initialized by the shaded classes for
+      // group service.
+      UserGroupInformation.setConfiguration(hdfsConf);
+      if (UserGroupInformation.isSecurityEnabled()) {
+        UserGroupInformation.loginUserFromKeytab(
+            alluxio.Configuration.get(PropertyKey.SECURITY_KERBEROS_PRINCIPAL),
+            alluxio.Configuration.get(PropertyKey.SECURITY_KERBEROS_KEYTAB_FILE));
+      }
+      UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+      mFileSystem = ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
         @Override
-        public FileSystem run() throws IOException {
-          LOG.info("User {} is connecting to hdfs.", LoginUser.get().getName());
+        public FileSystem run() throws Exception {
           return path.getFileSystem(config);
         }
       });
