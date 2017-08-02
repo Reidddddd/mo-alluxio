@@ -87,7 +87,12 @@ public final class PermissionChecker {
     List<Inode<?>> inodeList = inodePath.getInodeList();
 
     // collects user and groups
-    String user = AuthenticatedClientUser.getClientUser();
+    String user = "";
+    try {
+      user = AuthenticatedClientUser.get().getShortName();
+    } catch (IOException e) {
+      throw new AccessControlException(e.getMessage());
+    }
     List<String> groups = getGroups(user);
 
     // remove the last element if all components of the path exist, since we only check the parent.
@@ -116,7 +121,12 @@ public final class PermissionChecker {
     List<Inode<?>> inodeList = inodePath.getInodeList();
 
     // collects user and groups
-    String user = AuthenticatedClientUser.getClientUser();
+    String user = "";
+    try {
+      user = AuthenticatedClientUser.get().getShortName();
+    } catch (IOException e) {
+      throw new AccessControlException(e.getMessage());
+    }
     List<String> groups = getGroups(user);
 
     checkInodeList(user, groups, bits, inodePath.getUri().getPath(), inodeList, false);
@@ -137,10 +147,10 @@ public final class PermissionChecker {
 
     // collects user and groups
     try {
-      String user = AuthenticatedClientUser.getClientUser();
+      String user = AuthenticatedClientUser.get().getShortName();
       List<String> groups = getGroups(user);
       return getPermissionInternal(user, groups, inodePath.getUri().getPath(), inodeList);
-    } catch (AccessControlException e) {
+    } catch (AccessControlException | IOException e) {
       return Mode.Bits.NONE;
     }
   }
@@ -198,7 +208,12 @@ public final class PermissionChecker {
     List<Inode<?>> inodeList = inodePath.getInodeList();
 
     // collects user and groups
-    String user = AuthenticatedClientUser.getClientUser();
+    String user = "";
+    try {
+      user = AuthenticatedClientUser.get().getShortName();
+    } catch (IOException e) {
+      throw new AccessControlException(e.getMessage());
+    }
     List<String> groups = getGroups(user);
 
     if (isPrivilegedUser(user, groups)) {
