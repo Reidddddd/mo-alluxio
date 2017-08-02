@@ -15,6 +15,7 @@ import alluxio.AlluxioURI;
 import alluxio.PropertyKey;
 import alluxio.retry.CountingRetry;
 import alluxio.retry.RetryPolicy;
+import alluxio.security.LoginUser;
 import alluxio.underfs.AtomicFileOutputStream;
 import alluxio.underfs.AtomicFileOutputStreamCallback;
 import alluxio.underfs.BaseUnderFileSystem;
@@ -28,7 +29,6 @@ import alluxio.underfs.options.DeleteOptions;
 import alluxio.underfs.options.FileLocationOptions;
 import alluxio.underfs.options.MkdirsOptions;
 import alluxio.underfs.options.OpenOptions;
-import alluxio.util.network.NetworkAddressUtils;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
@@ -49,6 +49,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -93,18 +94,16 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
       Configuration hdfsConf) {
     super(ufsUri, conf);
     mUfsConf = conf;
-    Path path = new Path(ufsUri.toString());
+    final Path path = new Path(ufsUri.toString());
+    final Configuration config = hdfsConf;
     try {
-      // Set Hadoop UGI configuration to ensure UGI can be initialized by the shaded classes for
-      // group service.
-      UserGroupInformation.setConfiguration(hdfsConf);
-      if (UserGroupInformation.isSecurityEnabled()) {
-        connectFromMaster(
-            NetworkAddressUtils.getConnectHost(
-                NetworkAddressUtils.ServiceType.MASTER_RPC));
-      }
-      mFileSystem = path.getFileSystem(hdfsConf);
-    } catch (IOException e) {
+      mFileSystem = LoginUser.doAs(new PrivilegedExceptionAction<FileSystem>() {
+        @Override
+        public FileSystem run() throws IOException {
+          return path.getFileSystem(config);
+        }
+      });
+    } catch (Exception e) {
       throw new RuntimeException(
           String.format("Failed to get Hadoop FileSystem client for %s", ufsUri), e);
     }

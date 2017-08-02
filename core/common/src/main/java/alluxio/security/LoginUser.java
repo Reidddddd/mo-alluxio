@@ -67,6 +67,10 @@ public final class LoginUser {
     sLoginUser = subject.getPrincipals(User.class).iterator().next();
   }
 
+  static {
+    KerberosUserName.setRules(Configuration.get(PropertyKey.SECURITY_KERBEROS_AUTH_TO_LOCAL_RULES));
+  }
+
   /**
    * Get user's subject.
    * @return subject

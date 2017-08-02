@@ -646,6 +646,8 @@ public class PropertyKey {
       create(Name.SECURITY_KERBEROS_KEYTAB_FILE, null);
   public static final PropertyKey SECURITY_KERBEROS_PRINCIPAL =
       create(Name.SECURITY_KERBEROS_PRINCIPAL, null);
+  public static final PropertyKey SECURITY_KERBEROS_AUTH_TO_LOCAL_RULES =
+      create(Name.SECURITY_KERBEROS_AUTH_TO_LOCAL_RULES, null);
 
   //
   // Mesos and Yarn related properties
@@ -1134,6 +1136,8 @@ public class PropertyKey {
         "alluxio.security.kerberos.keytab.file";
     public static final String SECURITY_KERBEROS_PRINCIPAL =
         "alluxio.security.kerberos.principal";
+    public static final String SECURITY_KERBEROS_AUTH_TO_LOCAL_RULES =
+        "alluxio.security.kerberos.auth_to_local.rules";
 
     private Name() {} // prevent instantiation
   }
