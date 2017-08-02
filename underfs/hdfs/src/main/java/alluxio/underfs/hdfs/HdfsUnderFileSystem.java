@@ -28,7 +28,7 @@ import alluxio.underfs.options.DeleteOptions;
 import alluxio.underfs.options.FileLocationOptions;
 import alluxio.underfs.options.MkdirsOptions;
 import alluxio.underfs.options.OpenOptions;
-import alluxio.util.network.NetworkAddressUtils;
+//import alluxio.util.network.NetworkAddressUtils;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
@@ -101,11 +101,14 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
       // group service.
       UserGroupInformation.setConfiguration(hdfsConf);
       if (UserGroupInformation.isSecurityEnabled()) {
-        login(PropertyKey.SECURITY_KERBEROS_KEYTAB_FILE,
-              mUfsConf.getValue(PropertyKey.SECURITY_KERBEROS_KEYTAB_FILE),
-              PropertyKey.SECURITY_KERBEROS_PRINCIPAL,
-              mUfsConf.getValue(PropertyKey.SECURITY_KERBEROS_PRINCIPAL),
-              NetworkAddressUtils.getLocalHostName());
+        UserGroupInformation.loginUserFromKeytab(
+            mUfsConf.getValue(PropertyKey.SECURITY_KERBEROS_KEYTAB_FILE),
+            mUfsConf.getValue(PropertyKey.SECURITY_KERBEROS_PRINCIPAL));
+        //login(PropertyKey.SECURITY_KERBEROS_KEYTAB_FILE,
+        //      mUfsConf.getValue(PropertyKey.SECURITY_KERBEROS_KEYTAB_FILE),
+        //      PropertyKey.SECURITY_KERBEROS_PRINCIPAL,
+        //      mUfsConf.getValue(PropertyKey.SECURITY_KERBEROS_PRINCIPAL),
+        //      NetworkAddressUtils.getLocalHostName());
       }
       UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
       mFileSystem = ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
