@@ -32,13 +32,13 @@ public final class User implements Principal {
    * @param name the name of the user
    */
   public User(String name) {
-    mShortName = new KerberosUser(name).getServiceName();
+    mShortName = new KerberosUserName(name).getShortName();
     mFullName = name;
   }
 
   @Override
   public String getName() {
-    return mFullName;
+    return mShortName != null ? mShortName : mFullName;
   }
 
   /**
