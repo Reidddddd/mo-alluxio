@@ -18,9 +18,13 @@ import alluxio.master.journal.JournalReader;
 import alluxio.master.journal.JournalWriter;
 import alluxio.master.journal.options.JournalReaderOptions;
 import alluxio.master.journal.options.JournalWriterOptions;
+import alluxio.security.LoginUser;
+import alluxio.security.User;
 import alluxio.underfs.UfsStatus;
 import alluxio.underfs.UnderFileSystem;
 import alluxio.underfs.options.DeleteOptions;
+import alluxio.underfs.options.MkdirsOptions;
+import alluxio.util.KerberosUtils;
 import alluxio.util.URIUtils;
 import alluxio.util.UnderFileSystemUtils;
 
@@ -151,6 +155,13 @@ public class UfsJournal implements Journal {
             || status.isFile() && !mUfs.deleteFile(childPath)) {
           throw new IOException(String.format("Failed to delete %s", childPath));
         }
+      }
+    } else if (KerberosUtils.isKrbEnable()) {
+      try {
+        User user = LoginUser.get();
+        mUfs.mkdirs(location.toString(), MkdirsOptions.defaults().setOwner(user.getShortName()));
+      } catch (IOException e) {
+        throw new IOException(String.format("Failed to create %s", location));
       }
     } else if (!mUfs.mkdirs(location.toString())) {
       throw new IOException(String.format("Failed to create %s", location));
