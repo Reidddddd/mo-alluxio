@@ -40,11 +40,7 @@ public class KerberosUserName {
       Pattern.compile("([^/@]+)(/([^/@]+))?(@([^/@]+))?");
   /** A pattern that matches the format rules. */
   private static final Pattern FORMAT_PARSER = Pattern.compile("([^$]*)(\\$(\\d*))?");
-  /** The simplest principal pattern. */
-  private static final Pattern SIMPLE_PARSER = Pattern.compile("[/@]");
-  /**
-   * A pattern for parsing a auth_to_local rule.
-   */
+  /** A pattern for parsing a auth_to_local rule. */
   private static final Pattern RULE_PARSER =
       Pattern.compile("\\s*((DEFAULT)|(RULE:\\[(\\d*):([^\\]]*)](\\(([^)]*)\\))?"
                     + "(s/([^/]*)/([^/]*)/(g)?)?))/?(L)?");
@@ -233,9 +229,6 @@ public class KerberosUserName {
             shortName = authToLocalRule(base, mOrigin, mTarget, mRepeat);
           }
         }
-      }
-      if (shortName != null && SIMPLE_PARSER.matcher(shortName).find()) {
-        // No rule apply this principal.
       }
       if (mToLowerCase && shortName != null) {
         shortName = shortName.toLowerCase(Locale.ENGLISH);
