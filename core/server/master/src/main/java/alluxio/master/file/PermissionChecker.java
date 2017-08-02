@@ -230,12 +230,7 @@ public final class PermissionChecker {
    */
   private void checkSuperUser() throws AccessControlException {
     // collects user and groups
-    String user = "";
-    try {
-      user = AuthenticatedClientUser.get().getShortName();
-    } catch (IOException e) {
-      throw new AccessControlException(e.getMessage());
-    }
+    String user = AuthenticatedClientUser.getClientUser();
     List<String> groups = getGroups(user);
     if (!isPrivilegedUser(user, groups)) {
       throw new AccessControlException(ExceptionMessage.PERMISSION_DENIED
