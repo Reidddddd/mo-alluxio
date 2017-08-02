@@ -13,6 +13,9 @@ package alluxio.security;
 
 import alluxio.util.KerberosUtils;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -23,6 +26,8 @@ import java.util.regex.Pattern;
  * This class implements parsing and handling of Kerberos principal names.
  */
 public class KerberosUserName {
+  private static final Logger LOG = LoggerFactory.getLogger(KerberosUserName.class);
+
   /** The first component of principal. */
   private final String mServiceName;
   /** The second component of principal, it may be null. */
@@ -282,6 +287,7 @@ public class KerberosUserName {
     List<AuthToLocalRule> rules = new ArrayList<>();
     String rule = authToLocalsRules.trim();
     while (rule.length() > 0) {
+      LOG.info("Parsing rule: {}", rule);
       Matcher matcher = RULE_PARSER.matcher(rule);
       if (matcher.group(2) != null) {
         // Default rule
