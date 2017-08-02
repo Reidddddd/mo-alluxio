@@ -287,8 +287,10 @@ public class KerberosUserName {
     List<AuthToLocalRule> rules = new ArrayList<>();
     String rule = authToLocalsRules.trim();
     while (rule.length() > 0) {
-      LOG.info("Parsing rule: {}", rule);
       Matcher matcher = RULE_PARSER.matcher(rule);
+      if (!matcher.lookingAt()) {
+        throw new IllegalArgumentException("Invalid rule: " + rule);
+      }
       if (matcher.group(2) != null) {
         // Default rule
         rules.add(AuthToLocalRule.defaults());
