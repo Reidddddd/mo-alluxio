@@ -41,7 +41,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -360,12 +359,6 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
 
   @Override
   public boolean mkdirs(String path, MkdirsOptions options) throws IOException {
-    if (UserGroupInformation.isSecurityEnabled()) {
-      UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-      options.setOwner(ugi.getShortUserName());
-      options.setGroup(ugi.getGroupNames()[0]);
-    }
-
     IOException te = null;
     RetryPolicy retryPolicy = new CountingRetry(MAX_TRY);
     while (retryPolicy.attemptRetry()) {
