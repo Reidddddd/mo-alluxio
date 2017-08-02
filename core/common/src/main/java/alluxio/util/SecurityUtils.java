@@ -64,7 +64,7 @@ public final class SecurityUtils {
    */
   public static String getOwnerFromLoginModule() {
     try {
-      return LoginUser.get().getName();
+      return LoginUser.get().getShortName();
     } catch (UnauthenticatedException | UnsupportedOperationException e) {
       return "";
     }
@@ -80,7 +80,7 @@ public final class SecurityUtils {
       if (user == null) {
         return "";
       }
-      return user.getName();
+      return user.getShortName();
     } catch (IOException e) {
       return "";
     }
@@ -92,7 +92,7 @@ public final class SecurityUtils {
    */
   public static String getGroupFromLoginModule() {
     try {
-      return CommonUtils.getPrimaryGroupName(LoginUser.get().getName());
+      return CommonUtils.getPrimaryGroupName(LoginUser.get().getShortName());
     } catch (IOException | UnsupportedOperationException e) {
       return "";
     }
@@ -108,7 +108,7 @@ public final class SecurityUtils {
       if (user == null) {
         return "";
       }
-      return CommonUtils.getPrimaryGroupName(user.getName());
+      return CommonUtils.getPrimaryGroupName(user.getShortName());
     } catch (IOException e) {
       return "";
     }
