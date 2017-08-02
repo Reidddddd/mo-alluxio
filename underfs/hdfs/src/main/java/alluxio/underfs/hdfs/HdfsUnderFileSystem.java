@@ -101,9 +101,11 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
       // group service.
       UserGroupInformation.setConfiguration(hdfsConf);
       if (UserGroupInformation.isSecurityEnabled()) {
-        UserGroupInformation.loginUserFromKeytab(
-            alluxio.Configuration.get(PropertyKey.SECURITY_KERBEROS_PRINCIPAL),
-            alluxio.Configuration.get(PropertyKey.SECURITY_KERBEROS_KEYTAB_FILE));
+        login(PropertyKey.SECURITY_KERBEROS_KEYTAB_FILE,
+              mUfsConf.getValue(PropertyKey.SECURITY_KERBEROS_KEYTAB_FILE),
+              PropertyKey.SECURITY_KERBEROS_PRINCIPAL,
+              mUfsConf.getValue(PropertyKey.SECURITY_KERBEROS_PRINCIPAL),
+              NetworkAddressUtils.getLocalHostName());
       }
       UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
       mFileSystem = ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
