@@ -99,6 +99,7 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
       mFileSystem = LoginUser.doAs(new PrivilegedExceptionAction<FileSystem>() {
         @Override
         public FileSystem run() throws IOException {
+          LOG.info("User {} is connecting to hdfs.", LoginUser.get().getName());
           return path.getFileSystem(config);
         }
       });
