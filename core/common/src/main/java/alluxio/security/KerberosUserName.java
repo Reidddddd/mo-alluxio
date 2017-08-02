@@ -296,6 +296,7 @@ public class KerberosUserName {
                                  .setRepeat("g".equals(matcher.group(11)))
                                  .setToLowerCase("L".equals(matcher.group(12))));
       }
+      rule = rule.substring(matcher.end());
     }
     return rules;
   }
