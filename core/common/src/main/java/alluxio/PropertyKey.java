@@ -640,6 +640,8 @@ public class PropertyKey {
   public static final PropertyKey SECURITY_GROUP_MAPPING_CLASS =
       create(Name.SECURITY_GROUP_MAPPING_CLASS,
           "alluxio.security.group.provider.ShellBasedUnixGroupsMapping");
+  public static final PropertyKey SECURITY_USER_GROUP_PREFIX =
+      create(Name.SECURITY_USER_GROUP_PREFIX, null);
   public static final PropertyKey SECURITY_LOGIN_USERNAME =
       create(Name.SECURITY_LOGIN_USERNAME, null);
   public static final PropertyKey SECURITY_KERBEROS_KEYTAB_FILE =
@@ -1131,6 +1133,8 @@ public class PropertyKey {
         "alluxio.security.group.mapping.cache.timeout.ms";
     public static final String SECURITY_GROUP_MAPPING_CLASS =
         "alluxio.security.group.mapping.class";
+    public static final String SECURITY_USER_GROUP_PREFIX =
+        "alluxio.security.user.group.mapping.";
     public static final String SECURITY_LOGIN_USERNAME = "alluxio.security.login.username";
     public static final String SECURITY_KERBEROS_KEYTAB_FILE =
         "alluxio.security.kerberos.keytab.file";
