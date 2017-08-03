@@ -13,7 +13,6 @@ package alluxio.security.group.provider;
 
 import alluxio.Configuration;
 import alluxio.PropertyKey;
-import alluxio.PropertyKey.Name;
 import alluxio.security.group.GroupMappingService;
 
 import java.io.IOException;
@@ -33,8 +32,11 @@ public class ConfigBasedGroupsMapping implements GroupMappingService {
 
   @Override
   public List<String> getGroups(String user) throws IOException {
+    if (user == null || user.isEmpty()) {
+      return null;
+    }
     String groups =
-        Configuration.get(PropertyKey.fromString(Name.SECURITY_USER_GROUP_PREFIX + user));
+        Configuration.get(PropertyKey.Template.SECURITY_USER_GROUP_MAPPING.format(user));
     return Arrays.asList(groups.split(","));
   }
 }
