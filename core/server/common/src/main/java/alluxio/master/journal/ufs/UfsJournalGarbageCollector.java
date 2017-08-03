@@ -14,6 +14,7 @@ package alluxio.master.journal.ufs;
 import alluxio.Configuration;
 import alluxio.Constants;
 import alluxio.PropertyKey;
+import alluxio.security.LoginUser;
 import alluxio.underfs.UnderFileSystem;
 import alluxio.util.ThreadFactoryUtils;
 
@@ -24,6 +25,7 @@ import org.slf4j.LoggerFactory;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
+import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -58,7 +60,13 @@ final class UfsJournalGarbageCollector implements Closeable {
     mGc = mExecutor.scheduleAtFixedRate(new Runnable() {
           @Override
           public void run() {
-            gc();
+            LoginUser.doAs(new PrivilegedAction<Void>() {
+              @Override
+              public Void run() {
+                gc();
+                return null;
+              }
+            });
           }
         }, Constants.SECOND_MS, Configuration.getLong(PropertyKey.MASTER_JOURNAL_GC_PERIOD_MS),
         TimeUnit.MILLISECONDS);

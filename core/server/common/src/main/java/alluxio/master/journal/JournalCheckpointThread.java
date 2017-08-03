@@ -18,6 +18,7 @@ import alluxio.master.Master;
 import alluxio.master.journal.options.JournalReaderOptions;
 import alluxio.master.journal.options.JournalWriterOptions;
 import alluxio.proto.journal.Journal.JournalEntry;
+import alluxio.security.LoginUser;
 import alluxio.util.CommonUtils;
 
 import com.google.common.base.Preconditions;
@@ -25,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.security.PrivilegedAction;
 import java.util.Iterator;
 
 import javax.annotation.concurrent.NotThreadSafe;
@@ -115,7 +117,13 @@ public final class JournalCheckpointThread extends Thread {
   @Override
   public void run() {
     try {
-      runInternal();
+      LoginUser.doAs(new PrivilegedAction<Void>() {
+        @Override
+        public Void run() {
+          runInternal();
+          return null;
+        }
+      });
     } catch (RuntimeException e) {
       LOG.error("{}: Failed to run journal checkpoint thread, crashing.", mMaster.getName(), e);
       throw e;
