@@ -69,6 +69,7 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
 
   private FileSystem mFileSystem;
   private UnderFileSystemConfiguration mUfsConf;
+  private UserGroupInformation mUgi;
 
   /**
    * Factory method to constructs a new HDFS {@link UnderFileSystem} instance.
@@ -107,8 +108,8 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
               mUfsConf.getValue(PropertyKey.SECURITY_KERBEROS_PRINCIPAL),
               NetworkAddressUtils.getLocalHostName());
       }
-      UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-      mFileSystem = ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      mUgi = UserGroupInformation.getCurrentUser();
+      mFileSystem = mUgi.doAs(new PrivilegedExceptionAction<FileSystem>() {
         @Override
         public FileSystem run() throws Exception {
           return path.getFileSystem(config);
@@ -195,14 +196,24 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
   public OutputStream createDirect(String path, CreateOptions options) throws IOException {
     IOException te = null;
     RetryPolicy retryPolicy = new CountingRetry(MAX_TRY);
+    final String p = path;
+    final CreateOptions cops = options;
     while (retryPolicy.attemptRetry()) {
       try {
         // TODO(chaomin): support creating HDFS files with specified block size and replication.
-        return new HdfsUnderFileOutputStream(FileSystem.create(mFileSystem, new Path(path),
-            new FsPermission(options.getMode().toShort())));
+        return mUgi.doAs(new PrivilegedExceptionAction<OutputStream>() {
+          @Override
+          public OutputStream run() throws IOException {
+            return new HdfsUnderFileOutputStream(FileSystem.create(mFileSystem, new Path(p),
+              new FsPermission(cops.getMode().toShort())));
+          }
+        });
       } catch (IOException e) {
         LOG.warn("Retry count {} : {} ", retryPolicy.getRetryCount(), e.getMessage());
         te = e;
+      } catch (InterruptedException e) {
+        LOG.warn("Retry count {} : {} ", retryPolicy.getRetryCount(), e.getMessage());
+        te = new IOException(e);
       }
     }
     throw te;
