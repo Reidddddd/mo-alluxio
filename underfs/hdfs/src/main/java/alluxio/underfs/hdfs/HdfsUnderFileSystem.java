@@ -49,7 +49,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -232,23 +231,23 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
 
   @Override
   public boolean exists(String path) throws IOException {
-    return getFsWithSubject().exists(new Path(path));
+    return mFileSystem.exists(new Path(path));
   }
 
   @Override
   public long getBlockSizeByte(String path) throws IOException {
     Path tPath = new Path(path);
-    if (!getFsWithSubject().exists(tPath)) {
+    if (!mFileSystem.exists(tPath)) {
       throw new FileNotFoundException(path);
     }
-    FileStatus fs = getFsWithSubject().getFileStatus(tPath);
+    FileStatus fs = mFileSystem.getFileStatus(tPath);
     return fs.getBlockSize();
   }
 
   @Override
   public UfsDirectoryStatus getDirectoryStatus(String path) throws IOException {
     Path tPath = new Path(path);
-    FileStatus fs = getFsWithSubject().getFileStatus(tPath);
+    FileStatus fs = mFileSystem.getFileStatus(tPath);
     return new UfsDirectoryStatus(path, fs.getOwner(), fs.getGroup(), fs.getPermission().toShort());
   }
 
@@ -267,7 +266,6 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
     }
     List<String> ret = new ArrayList<>();
     try {
-      mFileSystem = getFsWithSubject();
       FileStatus fStatus = mFileSystem.getFileStatus(new Path(path));
       BlockLocation[] bLocations =
           mFileSystem.getFileBlockLocations(fStatus, options.getOffset(), 1);
@@ -284,7 +282,7 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
   @Override
   public UfsFileStatus getFileStatus(String path) throws IOException {
     Path tPath = new Path(path);
-    FileStatus fs = getFsWithSubject().getFileStatus(tPath);
+    FileStatus fs = mFileSystem.getFileStatus(tPath);
     return new UfsFileStatus(path, fs.getLen(), fs.getModificationTime(), fs.getOwner(),
         fs.getGroup(), fs.getPermission().toShort());
   }
@@ -293,7 +291,6 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
   public long getSpace(String path, SpaceType type) throws IOException {
     // Ignoring the path given, will give information for entire cluster
     // as Alluxio can load/store data out of entire HDFS cluster
-    mFileSystem = getFsWithSubject();
     if (mFileSystem instanceof DistributedFileSystem) {
       switch (type) {
         case SPACE_TOTAL:
@@ -317,12 +314,12 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
 
   @Override
   public boolean isDirectory(String path) throws IOException {
-    return getFsWithSubject().isDirectory(new Path(path));
+    return mFileSystem.isDirectory(new Path(path));
   }
 
   @Override
   public boolean isFile(String path) throws IOException {
-    return getFsWithSubject().isFile(new Path(path));
+    return mFileSystem.isFile(new Path(path));
   }
 
   @Override
@@ -387,7 +384,6 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
   public boolean mkdirs(String path, MkdirsOptions options) throws IOException {
     IOException te = null;
     RetryPolicy retryPolicy = new CountingRetry(MAX_TRY);
-    mFileSystem = getFsWithSubject();
     while (retryPolicy.attemptRetry()) {
       try {
         Path hdfsPath = new Path(path);
@@ -435,7 +431,7 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
     RetryPolicy retryPolicy = new CountingRetry(MAX_TRY);
     while (retryPolicy.attemptRetry()) {
       try {
-        FSDataInputStream inputStream = getFsWithSubject().open(new Path(path));
+        FSDataInputStream inputStream = mFileSystem.open(new Path(path));
         try {
           inputStream.seek(options.getOffset());
         } catch (IOException e) {
@@ -473,7 +469,6 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
   @Override
   public void setOwner(String path, String user, String group) throws IOException {
     try {
-      mFileSystem = getFsWithSubject();
       FileStatus fileStatus = mFileSystem.getFileStatus(new Path(path));
       mFileSystem.setOwner(fileStatus.getPath(), user, group);
     } catch (IOException e) {
@@ -493,7 +488,6 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
   @Override
   public void setMode(String path, short mode) throws IOException {
     try {
-      mFileSystem = getFsWithSubject();
       FileStatus fileStatus = mFileSystem.getFileStatus(new Path(path));
       mFileSystem.setPermission(fileStatus.getPath(), new FsPermission(mode));
     } catch (IOException e) {
@@ -519,7 +513,7 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
     RetryPolicy retryPolicy = new CountingRetry(MAX_TRY);
     while (retryPolicy.attemptRetry()) {
       try {
-        return getFsWithSubject().delete(new Path(path), recursive);
+        return mFileSystem.delete(new Path(path), recursive);
       } catch (IOException e) {
         LOG.warn("Retry count {} : {}", retryPolicy.getRetryCount(), e.getMessage());
         te = e;
@@ -538,7 +532,7 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
   private FileStatus[] listStatusInternal(String path) throws IOException {
     FileStatus[] files;
     try {
-      files = getFsWithSubject().listStatus(new Path(path));
+      files = mFileSystem.listStatus(new Path(path));
     } catch (FileNotFoundException e) {
       return null;
     }
@@ -561,7 +555,7 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
     RetryPolicy retryPolicy = new CountingRetry(MAX_TRY);
     while (retryPolicy.attemptRetry()) {
       try {
-        return getFsWithSubject().rename(new Path(src), new Path(dst));
+        return mFileSystem.rename(new Path(src), new Path(dst));
       } catch (IOException e) {
         LOG.warn("{} try to rename {} to {} : {}", retryPolicy.getRetryCount(), src, dst,
             e.getMessage());
@@ -569,14 +563,5 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
       }
     }
     throw te;
-  }
-
-  private FileSystem getFsWithSubject() {
-    return mUgi.doAs(new PrivilegedAction<FileSystem>() {
-      @Override
-      public FileSystem run() {
-        return mFileSystem;
-      }
-    });
   }
 }
