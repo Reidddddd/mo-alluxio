@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,6 +49,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -92,18 +94,25 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
       Configuration hdfsConf) {
     super(ufsUri, conf);
     mUfsConf = conf;
-    Path path = new Path(ufsUri.toString());
+    final Path path = new Path(ufsUri.toString());
+    final Configuration config = hdfsConf;
     try {
       // Set Hadoop UGI configuration to ensure UGI can be initialized by the shaded classes for
       // group service.
       UserGroupInformation.setConfiguration(hdfsConf);
       if (UserGroupInformation.isSecurityEnabled()) {
-        connectFromMaster(
-            NetworkAddressUtils.getConnectHost(
-                NetworkAddressUtils.ServiceType.MASTER_RPC));
+        UserGroupInformation.loginUserFromKeytab(
+            alluxio.Configuration.get(PropertyKey.SECURITY_KERBEROS_PRINCIPAL),
+            alluxio.Configuration.get(PropertyKey.SECURITY_KERBEROS_KEYTAB_FILE));
       }
-      mFileSystem = path.getFileSystem(hdfsConf);
-    } catch (IOException e) {
+      UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+      mFileSystem = ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+        @Override
+        public FileSystem run() throws Exception {
+          return path.getFileSystem(config);
+        }
+      });
+    } catch (Exception e) {
       throw new RuntimeException(
           String.format("Failed to get Hadoop FileSystem client for %s", ufsUri), e);
     }
