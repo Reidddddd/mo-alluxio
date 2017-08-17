@@ -60,13 +60,7 @@ final class UfsJournalGarbageCollector implements Closeable {
     mGc = mExecutor.scheduleAtFixedRate(new Runnable() {
           @Override
           public void run() {
-            LoginUser.doAs(new PrivilegedAction<Void>() {
-              @Override
-              public Void run() {
-                gc();
-                return null;
-              }
-            });
+            gc();
           }
         }, Constants.SECOND_MS, Configuration.getLong(PropertyKey.MASTER_JOURNAL_GC_PERIOD_MS),
         TimeUnit.MILLISECONDS);
