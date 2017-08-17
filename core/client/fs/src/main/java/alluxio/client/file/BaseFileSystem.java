@@ -12,6 +12,8 @@
 package alluxio.client.file;
 
 import alluxio.AlluxioURI;
+import alluxio.Configuration;
+import alluxio.PropertyKey;
 import alluxio.annotation.PublicApi;
 import alluxio.client.file.options.CreateDirectoryOptions;
 import alluxio.client.file.options.CreateFileOptions;
@@ -72,7 +74,8 @@ public class BaseFileSystem implements FileSystem {
   public static BaseFileSystem get(FileSystemContext context) {
     if (KerberosUtils.isKrbEnable()) {
       final FileSystemContext fsc = context;
-      LoginUser.loginFromTicketCache();
+      LoginUser.loginFromKeytab(Configuration.get(PropertyKey.SECURITY_KERBEROS_KEYTAB_FILE),
+                                Configuration.get(PropertyKey.SECURITY_KERBEROS_PRINCIPAL));
       LoginUser.doAs(new PrivilegedAction<BaseFileSystem>() {
         @Override
         public BaseFileSystem run() {
