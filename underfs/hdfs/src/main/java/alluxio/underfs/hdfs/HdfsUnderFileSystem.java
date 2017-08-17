@@ -107,8 +107,10 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
               PropertyKey.SECURITY_KERBEROS_PRINCIPAL,
               mUfsConf.getValue(PropertyKey.SECURITY_KERBEROS_PRINCIPAL),
               NetworkAddressUtils.getLocalHostName());
+        LOG.info("Construct a new HDFS UnderFileSystem");
       }
       mUgi = UserGroupInformation.getCurrentUser();
+      LOG.info("Connecting HDFS, from user {} ", mUgi.getUserName());
       mFileSystem = mUgi.doAs(new PrivilegedExceptionAction<FileSystem>() {
         @Override
         public FileSystem run() throws Exception {
@@ -355,6 +357,7 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
     String masterKeytab = mUfsConf.getValue(PropertyKey.MASTER_KEYTAB_KEY_FILE);
     String masterPrincipal = mUfsConf.getValue(PropertyKey.MASTER_PRINCIPAL);
 
+    LOG.info("Connecting HDFS from master");
     login(PropertyKey.MASTER_KEYTAB_KEY_FILE, masterKeytab, PropertyKey.MASTER_PRINCIPAL,
         masterPrincipal, host);
   }
@@ -368,6 +371,7 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
     String workerKeytab = mUfsConf.getValue(PropertyKey.WORKER_KEYTAB_FILE);
     String workerPrincipal = mUfsConf.getValue(PropertyKey.WORKER_PRINCIPAL);
 
+    LOG.info("Connecting HDFS from workerr");
     login(PropertyKey.WORKER_KEYTAB_FILE, workerKeytab, PropertyKey.WORKER_PRINCIPAL,
         workerPrincipal, host);
   }

@@ -328,6 +328,7 @@ public class AlluxioMasterProcess implements MasterProcess {
     // start thrift rpc server
     mIsServing = true;
     mStartTimeMs = System.currentTimeMillis();
+    LOG.info("Login successfully, and starting thrift server.");
     LoginUser.doAs(new PrivilegedAction<Void>() {
       @Override
       public Void run() {

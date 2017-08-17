@@ -78,6 +78,7 @@ final class UfsJournalGarbageCollector implements Closeable {
   void gc() {
     UfsJournalSnapshot snapshot;
     try {
+      LOG.info("Getting snapshot.");
       snapshot = UfsJournalSnapshot.getSnapshot(mJournal);
     } catch (IOException e) {
       LOG.warn("Failed to get journal snapshot with error {}.", e.getMessage());
@@ -89,10 +90,12 @@ final class UfsJournalGarbageCollector implements Closeable {
     List<UfsJournalFile> checkpoints = snapshot.getCheckpoints();
     if (!checkpoints.isEmpty()) {
       checkpointSequenceNumber = checkpoints.get(checkpoints.size() - 1).getEnd();
+      LOG.info("Last checkpoint seq number is {}", checkpointSequenceNumber);
     }
     for (int i = 0; i < checkpoints.size() - 1; i++) {
       // Only keep at most 2 checkpoints.
       if (i < checkpoints.size() - 2) {
+        LOG.info("Deleting old checkpoints at location {}.", checkpoints.get(i).getLocation());
         deleteNoException(checkpoints.get(i).getLocation());
       }
       // For the the second last checkpoint. Check whether it has been there for a long time.
@@ -132,6 +135,7 @@ final class UfsJournalGarbageCollector implements Closeable {
         : Configuration.getLong(PropertyKey.MASTER_JOURNAL_GC_THRESHOLD_MS);
 
     if (System.currentTimeMillis() - lastModifiedTimeMs > thresholdMs) {
+      LOG.info("Deleting stale checkpoints at location {}.", file.getLocation());
       deleteNoException(file.getLocation());
     }
   }

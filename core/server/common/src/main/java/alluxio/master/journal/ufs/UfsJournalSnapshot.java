@@ -13,6 +13,9 @@ package alluxio.master.journal.ufs;
 
 import alluxio.underfs.UfsStatus;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,6 +28,7 @@ import javax.annotation.concurrent.ThreadSafe;
  */
 @ThreadSafe
 final class UfsJournalSnapshot {
+  private static final Logger LOG = LoggerFactory.getLogger(UfsJournalSnapshot.class);
   /** The committed checkpoints. */
   private final List<UfsJournalFile> mCheckpoints;
   /** The journal edit logs including the incomplete log. */
@@ -86,6 +90,7 @@ final class UfsJournalSnapshot {
     // Checkpoints.
     List<UfsJournalFile> checkpoints = new ArrayList<>();
     UfsStatus[] statuses = journal.getUfs().listStatus(journal.getCheckpointDir().toString());
+    LOG.info("Got checkpoints status.");
     if (statuses != null) {
       for (UfsStatus status : statuses) {
         UfsJournalFile file = UfsJournalFile.decodeCheckpointFile(journal, status.getName());
@@ -93,11 +98,13 @@ final class UfsJournalSnapshot {
           checkpoints.add(file);
         }
       }
+      LOG.info("Sorting checkpoints.");
       Collections.sort(checkpoints);
     }
 
     List<UfsJournalFile> logs = new ArrayList<>();
     statuses = journal.getUfs().listStatus(journal.getLogDir().toString());
+    LOG.info("Got logs status.");
     if (statuses != null) {
       for (UfsStatus status : statuses) {
         UfsJournalFile file = UfsJournalFile.decodeLogFile(journal, status.getName());
@@ -105,11 +112,13 @@ final class UfsJournalSnapshot {
           logs.add(file);
         }
       }
+      LOG.info("Sorting logs.");
       Collections.sort(logs);
     }
 
     List<UfsJournalFile> tmpCheckpoints = new ArrayList<>();
     statuses = journal.getUfs().listStatus(journal.getTmpDir().toString());
+    LOG.info("Got temp checkpoints status.");
     if (statuses != null) {
       for (UfsStatus status : statuses) {
         tmpCheckpoints.add(UfsJournalFile.decodeTemporaryCheckpointFile(journal, status.getName()));

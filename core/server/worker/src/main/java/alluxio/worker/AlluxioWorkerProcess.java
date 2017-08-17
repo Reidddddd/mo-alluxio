@@ -232,6 +232,7 @@ public final class AlluxioWorkerProcess implements WorkerProcess {
 
     // Start serving RPC, this will block
     LOG.info("{} version {} started @ {}", this, RuntimeConstants.VERSION, mRpcAddress);
+    LOG.info("Login successfully, and starting thrift server.");
     LoginUser.doAs(new PrivilegedAction<Void>() {
       @Override
       public Void run() {

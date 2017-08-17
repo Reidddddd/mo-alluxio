@@ -120,6 +120,7 @@ public final class JournalCheckpointThread extends Thread {
       LoginUser.doAs(new PrivilegedAction<Void>() {
         @Override
         public Void run() {
+          LOG.info("Login successfully, and starting journal checkpoint thread");
           runInternal();
           return null;
         }
@@ -185,6 +186,7 @@ public final class JournalCheckpointThread extends Thread {
           CommonUtils.sleepMs(LOG, mShutdownQuietWaitTimeMs);
           quietPeriodWaited = true;
         } else {
+          LOG.info("No entry is found, sleep for {} ms.", mJournalCheckpointSleepTimeMs);
           CommonUtils.sleepMs(LOG, mJournalCheckpointSleepTimeMs);
         }
       }
@@ -200,16 +202,21 @@ public final class JournalCheckpointThread extends Thread {
     }
     long nextSequenceNumber = mJournalReader.getNextSequenceNumber();
     if (nextSequenceNumber - mNextSequenceNumberToCheckpoint < mCheckpointPeriodEntries) {
+      LOG.info("No need to checkpoint, for the gap is {} which less than {}.",
+               nextSequenceNumber - mNextSequenceNumberToCheckpoint, mCheckpointPeriodEntries);
       return;
     }
     try {
       mNextSequenceNumberToCheckpoint = mJournal.getNextSequenceNumberToCheckpoint();
+      LOG.info("Next seq number: {} to be checkpointed", mNextSequenceNumberToCheckpoint);
     } catch (IOException e) {
       LOG.warn("{}: Failed to get the next sequence number to checkpoint with error {}.",
           mMaster.getName(), e.getMessage());
       return;
     }
     if (nextSequenceNumber - mNextSequenceNumberToCheckpoint < mCheckpointPeriodEntries) {
+      LOG.info("No need to checkpoint, for the gap is {} which less than {}.",
+               nextSequenceNumber - mNextSequenceNumberToCheckpoint, mCheckpointPeriodEntries);
       return;
     }
 

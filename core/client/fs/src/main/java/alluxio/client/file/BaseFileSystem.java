@@ -76,6 +76,7 @@ public class BaseFileSystem implements FileSystem {
       final FileSystemContext fsc = context;
       LoginUser.loginFromKeytab(Configuration.get(PropertyKey.SECURITY_KERBEROS_KEYTAB_FILE),
                                 Configuration.get(PropertyKey.SECURITY_KERBEROS_PRINCIPAL));
+      LOG.info("Login successfully, and retrieving a BaseFileSystem.");
       LoginUser.doAs(new PrivilegedAction<BaseFileSystem>() {
         @Override
         public BaseFileSystem run() {
