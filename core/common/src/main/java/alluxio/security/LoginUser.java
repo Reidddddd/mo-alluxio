@@ -13,6 +13,7 @@ package alluxio.security;
 
 import alluxio.Configuration;
 import alluxio.PropertyKey;
+import alluxio.clock.SystemClock;
 import alluxio.exception.status.UnauthenticatedException;
 import alluxio.security.authentication.AuthType;
 import alluxio.security.login.AlluxioLoginModule;
@@ -23,6 +24,8 @@ import alluxio.util.KerberosUtils;
 import org.apache.thrift.transport.TTransportException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Preconditions;
 
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
@@ -35,6 +38,8 @@ import java.util.Set;
 import javax.annotation.concurrent.ThreadSafe;
 import javax.security.auth.Subject;
 import javax.security.auth.callback.CallbackHandler;
+import javax.security.auth.kerberos.KerberosKey;
+import javax.security.auth.kerberos.KerberosTicket;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
 
@@ -55,6 +60,9 @@ public final class LoginUser {
 
   /** User entity. */
   private static Subject sSubject;
+  /** Kerberos type. */
+  private static boolean sIsKeytab;
+  private static boolean sIsKrbTkt;
 
   private LoginUser() {} // prevent instantiation
 
@@ -65,6 +73,8 @@ public final class LoginUser {
   public static void setUserSubject(Subject subject) {
     sSubject = subject;
     sLoginUser = subject.getPrincipals(User.class).iterator().next();
+    sIsKeytab = !subject.getPrivateCredentials(KerberosKey.class).isEmpty();
+    sIsKrbTkt = !subject.getPrivateCredentials(KerberosTicket.class).isEmpty();
   }
 
   static {
@@ -161,7 +171,80 @@ public final class LoginUser {
     }
     checkLogin(subject);
     setUserSubject(subject);
+    setLogin(login);
     LOG.info("Login successfully for user {} using keytab file {}.", principal, keytab);
+  }
+
+  private static void setLogin(LoginContext login) {
+    sLoginUser.setLoginContext(login);
+  }
+
+  private static LoginContext getLogin() {
+    return sLoginUser.getLoginContext();
+  }
+
+  /**
+   * Check ticket valid and relogin if necessary.
+   * @throws IOException
+   */
+  public static void checkTGTAndReloginFromKeytab() {
+    if (!KerberosUtils.isKrbEnable() && !sIsKeytab) {
+      return;
+    }
+    KerberosTicket tgt = getTGT();
+    long now = new SystemClock().millis();
+    if (tgt != null && now < getRefreshTime(tgt)) {
+      return;
+    }
+    reloginFromKeytab();
+  }
+
+  /**
+   * Relogin from keytab.
+   */
+  public static void reloginFromKeytab() {
+    if (!KerberosUtils.isKrbEnable() && !sIsKeytab) {
+      return;
+    }
+    KerberosTicket tgt = getTGT();
+    long now = new SystemClock().millis();
+    if (tgt != null && now < getRefreshTime(tgt)) {
+      return;
+    }
+    LoginContext login = getLogin();
+    Preconditions.checkNotNull(login);
+    try {
+      LOG.info("Starting relogin.");
+      synchronized (LoginUser.class) {
+        login.logout();
+        login = createLoginContext(AuthType.KERBEROS_KEYTAB, getSubject(),
+          AlluxioLoginModule.class.getClassLoader(), new LoginModuleConfiguration());
+        login.login();
+      }
+    } catch (LoginException e) {
+      throw new RuntimeException("Relogin failed from keytab.");
+    }
+    checkLogin(getSubject());
+    setUserSubject(getSubject());
+    setLogin(login);
+    LOG.info("ReLogin successfully.");
+  }
+
+  private static long getRefreshTime(KerberosTicket tgt) {
+    long start = tgt.getStartTime().getTime();
+    long end = tgt.getEndTime().getTime();
+    return start + (long) ((end - start) * 0.8);
+  }
+
+  private static synchronized KerberosTicket getTGT() {
+    Set<KerberosTicket> tickets = sSubject.getPrivateCredentials(KerberosTicket.class);
+    for (KerberosTicket ticket : tickets) {
+      if (KerberosUtils.isOriginalTGT(ticket)) {
+        LOG.info("Found tgt " + ticket);
+        return ticket;
+      }
+    }
+    return null;
   }
 
   /**
@@ -207,6 +290,22 @@ public final class LoginUser {
   }
 
   /**
+   * Did the login happen via keytab.
+   * @return true or false
+   */
+  public static boolean isLoginKeytabBased() {
+    return sIsKeytab;
+  }
+
+  /**
+   * Did the login happen via ticket cache.
+   * @return true or false
+   */
+  public static boolean isLoginTicketBased() {
+    return sIsKrbTkt;
+  }
+
+  /**
    * Login using ticket cache, mainly from client side.
    */
   public static void loginFromTicketCache() {
@@ -230,6 +329,7 @@ public final class LoginUser {
 
     checkLogin(subject);
     setUserSubject(subject);
+    setLogin(login);
   }
 
   private static void checkLogin(Subject subject) {

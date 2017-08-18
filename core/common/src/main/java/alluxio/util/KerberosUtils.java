@@ -18,6 +18,8 @@ import alluxio.security.authentication.AuthType;
 import java.lang.reflect.Method;
 
 import javax.annotation.concurrent.ThreadSafe;
+import javax.security.auth.kerberos.KerberosPrincipal;
+import javax.security.auth.kerberos.KerberosTicket;
 
 /**
  * Utility methods for kerberos.
@@ -70,5 +72,24 @@ public final class KerberosUtils {
   public static String getKerberosLoginModuleName() {
     return OSUtils.IBM_JAVA ? "com.ibm.security.auth.module.Krb5LoginModule"
         : "com.sun.security.auth.module.Krb5LoginModule";
+  }
+
+  /**
+   * Check whether the server principal is the TGS's principal.
+   * @param ticket the original TGT
+   * @return true or false
+   */
+  public static boolean isOriginalTGT(KerberosTicket ticket) {
+    return isTGTPrincipal(ticket.getServer());
+  }
+
+  private static boolean isTGTPrincipal(KerberosPrincipal principal) {
+    if (principal == null) {
+      return false;
+    }
+    if (principal.getName().equals("krbtgt/" + principal.getRealm() + "@" + principal.getRealm())) {
+      return true;
+    }
+    return false;
   }
 }

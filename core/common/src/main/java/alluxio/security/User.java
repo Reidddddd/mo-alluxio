@@ -14,6 +14,7 @@ package alluxio.security;
 import java.security.Principal;
 
 import javax.annotation.concurrent.ThreadSafe;
+import javax.security.auth.login.LoginContext;
 
 /**
  * This class represents a user in Alluxio. It implements {@link java.security.Principal} in the
@@ -24,6 +25,7 @@ public final class User implements Principal {
   private final String mFullName;
   private final String mShortName;
 
+  private LoginContext mLoginContext;
   // TODO(dong): add more attributes and methods for supporting Kerberos
 
   /**
@@ -47,6 +49,22 @@ public final class User implements Principal {
    */
   public String getShortName() {
     return mShortName != null ? mShortName : mFullName;
+  }
+
+  /**
+   * Get login context.
+   * @return login context
+   */
+  public LoginContext getLoginContext() {
+    return mLoginContext;
+  }
+
+  /**
+   * Set login context.
+   * @param login user's login context
+   */
+  public void setLoginContext(LoginContext login) {
+    mLoginContext = login;
   }
 
   @Override
