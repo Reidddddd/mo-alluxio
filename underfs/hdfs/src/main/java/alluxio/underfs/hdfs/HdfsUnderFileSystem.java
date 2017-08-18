@@ -12,6 +12,7 @@
 package alluxio.underfs.hdfs;
 
 import alluxio.AlluxioURI;
+import alluxio.Constants;
 import alluxio.PropertyKey;
 import alluxio.retry.CountingRetry;
 import alluxio.retry.RetryPolicy;
@@ -28,6 +29,7 @@ import alluxio.underfs.options.DeleteOptions;
 import alluxio.underfs.options.FileLocationOptions;
 import alluxio.underfs.options.MkdirsOptions;
 import alluxio.underfs.options.OpenOptions;
+import alluxio.util.ThreadFactoryUtils;
 import alluxio.util.network.NetworkAddressUtils;
 
 import com.google.common.base.Preconditions;
@@ -55,6 +57,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -70,6 +75,9 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
   private FileSystem mFileSystem;
   private UnderFileSystemConfiguration mUfsConf;
   private UserGroupInformation mUgi;
+
+  private final ScheduledExecutorService mExecutor = Executors.newSingleThreadScheduledExecutor(
+      ThreadFactoryUtils.build("Kerberos user relogin", true));
 
   /**
    * Factory method to constructs a new HDFS {@link UnderFileSystem} instance.
@@ -108,6 +116,16 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
               mUfsConf.getValue(PropertyKey.SECURITY_KERBEROS_PRINCIPAL),
               NetworkAddressUtils.getLocalHostName());
         LOG.info("Construct a new HDFS UnderFileSystem");
+        mExecutor.scheduleAtFixedRate(new Runnable() {
+          @Override
+          public void run() {
+            try {
+              mUgi.checkTGTAndReloginFromKeytab();
+            } catch (IOException e) {
+              LOG.info("Relogin failed.");
+            }
+          }
+        }, Constants.SECOND_MS, 300000, TimeUnit.MILLISECONDS);
       }
       mUgi = UserGroupInformation.getCurrentUser();
       LOG.info("Connecting HDFS, from user {} ", mUgi.getUserName());

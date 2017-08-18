@@ -14,7 +14,6 @@ package alluxio.master.journal.ufs;
 import alluxio.Configuration;
 import alluxio.Constants;
 import alluxio.PropertyKey;
-import alluxio.security.LoginUser;
 import alluxio.underfs.UnderFileSystem;
 import alluxio.util.ThreadFactoryUtils;
 
@@ -80,7 +79,6 @@ final class UfsJournalGarbageCollector implements Closeable {
     UfsJournalSnapshot snapshot;
     try {
       LOG.info("Getting snapshot.");
-      LoginUser.checkTGTAndReloginFromKeytab();
       snapshot = UfsJournalSnapshot.getSnapshot(mJournal);
     } catch (IOException e) {
       LOG.warn("Failed to get journal snapshot with error {}.", e.getMessage());
