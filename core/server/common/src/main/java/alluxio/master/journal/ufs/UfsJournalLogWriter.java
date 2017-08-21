@@ -170,6 +170,7 @@ final class UfsJournalLogWriter implements JournalWriter {
               mJournalOutputStream.mCurrentLog, e.getMessage()), e);
     }
     mNextSequenceNumber++;
+    LOG.info("Next sequence number: {}", mNextSequenceNumber);
   }
 
   /**
@@ -204,7 +205,9 @@ final class UfsJournalLogWriter implements JournalWriter {
     }
     DataOutputStream outputStream = mJournalOutputStream.mOutputStream;
     try {
+      LOG.info("Start flushing journals which size is {}", outputStream.size());
       outputStream.flush();
+      LOG.info("Finish flushing.");
     } catch (IOException e) {
       mRotateLogForNextWrite = true;
       throw new IOException(ExceptionMessage.JOURNAL_FLUSH_FAILURE
