@@ -12,6 +12,8 @@
 package alluxio.shell.command;
 
 import alluxio.client.file.FileSystem;
+import alluxio.security.LoginUser;
+import alluxio.util.KerberosUtils;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -76,6 +78,9 @@ public abstract class AbstractShellCommand implements ShellCommand {
             .build();
 
   protected AbstractShellCommand(FileSystem fs) {
+    if (KerberosUtils.isKrbEnable()) {
+      LoginUser.loginFromTicketCache();
+    }
     mFileSystem = fs;
   }
 
