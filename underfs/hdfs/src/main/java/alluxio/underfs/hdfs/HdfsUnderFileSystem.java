@@ -220,6 +220,7 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
     final CreateOptions cops = options;
     while (retryPolicy.attemptRetry()) {
       try {
+        LOG.info("Create direct for {}.", path);
         // TODO(chaomin): support creating HDFS files with specified block size and replication.
         return mUgi.doAs(new PrivilegedExceptionAction<OutputStream>() {
           @Override
@@ -368,30 +369,12 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
 
   @Override
   public void connectFromMaster(String host) throws IOException {
-    if (!mUfsConf.containsKey(PropertyKey.MASTER_KEYTAB_KEY_FILE)
-        || !mUfsConf.containsKey(PropertyKey.MASTER_PRINCIPAL)) {
-      return;
-    }
-    String masterKeytab = mUfsConf.getValue(PropertyKey.MASTER_KEYTAB_KEY_FILE);
-    String masterPrincipal = mUfsConf.getValue(PropertyKey.MASTER_PRINCIPAL);
-
-    LOG.info("Connecting HDFS from master");
-    login(PropertyKey.MASTER_KEYTAB_KEY_FILE, masterKeytab, PropertyKey.MASTER_PRINCIPAL,
-        masterPrincipal, host);
+    mUgi.checkTGTAndReloginFromKeytab();
   }
 
   @Override
   public void connectFromWorker(String host) throws IOException {
-    if (!mUfsConf.containsKey(PropertyKey.WORKER_KEYTAB_FILE)
-        || !mUfsConf.containsKey(PropertyKey.WORKER_PRINCIPAL)) {
-      return;
-    }
-    String workerKeytab = mUfsConf.getValue(PropertyKey.WORKER_KEYTAB_FILE);
-    String workerPrincipal = mUfsConf.getValue(PropertyKey.WORKER_PRINCIPAL);
-
-    LOG.info("Connecting HDFS from workerr");
-    login(PropertyKey.WORKER_KEYTAB_FILE, workerKeytab, PropertyKey.WORKER_PRINCIPAL,
-        workerPrincipal, host);
+    mUgi.checkTGTAndReloginFromKeytab();
   }
 
   private void login(PropertyKey keytabFileKey, String keytabFile, PropertyKey principalKey,
