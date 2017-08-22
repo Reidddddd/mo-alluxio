@@ -45,7 +45,7 @@ public class HdfsUnderFileOutputStream extends OutputStream {
   @Override
   public void flush() throws IOException {
     // TODO(calvin): This functionality should be restricted to select output streams.
-    mOut.sync();
+    mOut.hflush();
   }
 
   @Override
