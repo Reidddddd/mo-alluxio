@@ -53,6 +53,8 @@ final class UfsJournalLogWriter implements JournalWriter {
 
   /** The maximum size in bytes of a log file. */
   private final long mMaxLogSize;
+  /** The overall log size. */
+  private long mCurrentLogSize;
 
   /** The next sequence number to use. */
   private long mNextSequenceNumber;
@@ -144,7 +146,7 @@ final class UfsJournalLogWriter implements JournalWriter {
     mUfs = mJournal.getUfs();
     mNextSequenceNumber = options.getNextSequenceNumber();
     mMaxLogSize = Configuration.getBytes(PropertyKey.MASTER_JOURNAL_LOG_SIZE_BYTES_MAX);
-
+    mCurrentLogSize = 0L;
     mRotateLogForNextWrite = true;
     UfsJournalFile currentLog = UfsJournalSnapshot.getCurrentLog(mJournal);
     if (currentLog != null) {
@@ -214,15 +216,17 @@ final class UfsJournalLogWriter implements JournalWriter {
           .getMessageWithUrl(RuntimeConstants.ALLUXIO_DEBUG_DOCS_URL,
               mJournalOutputStream.mCurrentLog, e.getMessage()), e);
     }
-    boolean overSize = mJournalOutputStream.bytesWritten() >= mMaxLogSize;
+    mCurrentLogSize += mJournalOutputStream.bytesWritten();
+    LOG.info("Journal written size: {}", mCurrentLogSize);
+    boolean overSize = mCurrentLogSize >= mMaxLogSize;
     if (overSize || !mUfs.supportsFlush()) {
       // (1) The log file is oversize, needs to be rotated. Or
       // (2) Underfs is S3 or OSS, flush on S3OutputStream/OSSOutputStream will only flush to
       // local temporary file, call close and complete the log to sync the journal entry to S3/OSS.
       if (overSize) {
-        LOG.info("Rotating log file. size: {} maxSize: {}", mJournalOutputStream.bytesWritten(),
-            mMaxLogSize);
+        LOG.info("Rotating log file. size: {} maxSize: {}", mCurrentLogSize, mMaxLogSize);
       }
+      mCurrentLogSize = 0L;
       mRotateLogForNextWrite = true;
     }
   }
