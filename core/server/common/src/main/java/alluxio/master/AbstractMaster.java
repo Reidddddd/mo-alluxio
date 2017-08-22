@@ -153,6 +153,7 @@ public abstract class AbstractMaster implements Master {
       // master is this journal checkpoint thread (no concurrent access).
       // This thread keeps picking up new completed logs and optionally building new checkpoints.
       mJournalCheckpointThread = new JournalCheckpointThread(this, mJournal);
+      mJournalWriter = mJournal.getWriter(JournalWriterOptions.defaults().setPrimary(false));
       mJournalCheckpointThread.start();
     }
   }
