@@ -201,6 +201,8 @@ public final class JournalCheckpointThread extends Thread {
       return;
     }
     long nextSequenceNumber = mJournalReader.getNextSequenceNumber();
+    LOG.info("Next seq number: {}", nextSequenceNumber);
+    LOG.info("Last chkp number: {}", mNextSequenceNumberToCheckpoint);
     if (nextSequenceNumber - mNextSequenceNumberToCheckpoint < mCheckpointPeriodEntries) {
       LOG.info("No need to checkpoint, for the gap is {} which less than {}.",
                nextSequenceNumber - mNextSequenceNumberToCheckpoint, mCheckpointPeriodEntries);
@@ -208,7 +210,7 @@ public final class JournalCheckpointThread extends Thread {
     }
     try {
       mNextSequenceNumberToCheckpoint = mJournal.getNextSequenceNumberToCheckpoint();
-      LOG.info("Next seq number: {} to be checkpointed", mNextSequenceNumberToCheckpoint);
+      LOG.info("Should chkp number: {} to be checkpointed", mNextSequenceNumberToCheckpoint);
     } catch (IOException e) {
       LOG.warn("{}: Failed to get the next sequence number to checkpoint with error {}.",
           mMaster.getName(), e.getMessage());
