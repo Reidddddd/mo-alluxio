@@ -120,7 +120,7 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
           @Override
           public void run() {
             try {
-              mUgi.checkTGTAndReloginFromKeytab();
+              reloginIfNecessary();
             } catch (IOException e) {
               LOG.info("Relogin failed.");
             }
@@ -220,7 +220,7 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
     final CreateOptions cops = options;
     while (retryPolicy.attemptRetry()) {
       try {
-        LOG.info("Create direct for {}.", path);
+        LOG.info("Created direct for {}.", path);
         // TODO(chaomin): support creating HDFS files with specified block size and replication.
         return mUgi.doAs(new PrivilegedExceptionAction<OutputStream>() {
           @Override
@@ -369,11 +369,15 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
 
   @Override
   public void connectFromMaster(String host) throws IOException {
-    mUgi.checkTGTAndReloginFromKeytab();
+    reloginIfNecessary();
   }
 
   @Override
   public void connectFromWorker(String host) throws IOException {
+    reloginIfNecessary();
+  }
+
+  private void reloginIfNecessary() throws IOException {
     mUgi.checkTGTAndReloginFromKeytab();
   }
 
@@ -434,9 +438,17 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
   public InputStream open(String path, OpenOptions options) throws IOException {
     IOException te = null;
     RetryPolicy retryPolicy = new CountingRetry(MAX_TRY);
+    final String p = path;
     while (retryPolicy.attemptRetry()) {
       try {
-        FSDataInputStream inputStream = mFileSystem.open(new Path(path));
+        reloginIfNecessary();
+        FSDataInputStream inputStream = mUgi.doAs(
+            new PrivilegedExceptionAction<FSDataInputStream>() {
+              @Override
+              public FSDataInputStream run() throws Exception {
+                return mFileSystem.open(new Path(p));
+              }
+            });
         try {
           inputStream.seek(options.getOffset());
         } catch (IOException e) {
@@ -444,9 +456,13 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
           throw e;
         }
         return new HdfsUnderFileInputStream(inputStream);
-      } catch (IOException e) {
+      } catch (IOException | InterruptedException e) {
         LOG.warn("{} try to open {} : {}", retryPolicy.getRetryCount(), path, e.getMessage());
-        te = e;
+        if (e instanceof InterruptedException) {
+          te = new IOException(e.getMessage());
+        } else {
+          te = (IOException) e;
+        }
       }
     }
     throw te;
