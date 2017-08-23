@@ -456,13 +456,12 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
           throw e;
         }
         return new HdfsUnderFileInputStream(inputStream);
-      } catch (IOException | InterruptedException e) {
+      } catch (IOException e) {
         LOG.warn("{} try to open {} : {}", retryPolicy.getRetryCount(), path, e.getMessage());
-        if (e instanceof InterruptedException) {
-          te = new IOException(e.getMessage());
-        } else {
-          te = (IOException) e;
-        }
+        te = e;
+      } catch (InterruptedException ite) {
+        LOG.warn("{} try to open {} : {}", retryPolicy.getRetryCount(), path, ite.getMessage());
+        te = new IOException(ite);
       }
     }
     throw te;
