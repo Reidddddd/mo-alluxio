@@ -977,12 +977,14 @@ public final class DefaultFileSystemMaster extends AbstractMaster implements Fil
     inode.complete(length);
 
     if (inode.isPersisted()) {
-      // Commit all the file blocks (without locations) so the metadata for the block exists.
-      long currLength = length;
-      for (long blockId : inode.getBlockIds()) {
-        long blockSize = Math.min(currLength, inode.getBlockSizeBytes());
-        mBlockMaster.commitBlockInUFS(blockId, blockSize);
-        currLength -= blockSize;
+      if (!replayed) {
+        // Commit all the file blocks (without locations) so the metadata for the block exists.
+        long currLength = length;
+        for (long blockId : inode.getBlockIds()) {
+          long blockSize = Math.min(currLength, inode.getBlockSizeBytes());
+          mBlockMaster.commitBlockInUFS(blockId, blockSize);
+          currLength -= blockSize;
+        }
       }
       // The path exists in UFS, so it is no longer absent
       mUfsAbsentPathCache.processExisting(inodePath.getUri());
