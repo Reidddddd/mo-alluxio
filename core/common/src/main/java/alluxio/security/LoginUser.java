@@ -78,7 +78,10 @@ public final class LoginUser {
   }
 
   static {
-    KerberosUserName.setRules(Configuration.get(PropertyKey.SECURITY_KERBEROS_AUTH_TO_LOCAL_RULES));
+    if (KerberosUtils.isKrbEnable()) {
+      KerberosUserName.setRules(
+          Configuration.get(PropertyKey.SECURITY_KERBEROS_AUTH_TO_LOCAL_RULES));
+    }
   }
 
   /**
