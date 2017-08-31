@@ -12,7 +12,6 @@
 package alluxio.underfs.hdfs;
 
 import alluxio.AlluxioURI;
-import alluxio.Constants;
 import alluxio.PropertyKey;
 import alluxio.retry.CountingRetry;
 import alluxio.retry.RetryPolicy;
@@ -29,7 +28,6 @@ import alluxio.underfs.options.DeleteOptions;
 import alluxio.underfs.options.FileLocationOptions;
 import alluxio.underfs.options.MkdirsOptions;
 import alluxio.underfs.options.OpenOptions;
-import alluxio.util.ThreadFactoryUtils;
 import alluxio.util.network.NetworkAddressUtils;
 
 import com.google.common.base.Preconditions;
@@ -57,9 +55,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -75,9 +70,6 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
   private FileSystem mFileSystem;
   private UnderFileSystemConfiguration mUfsConf;
   private UserGroupInformation mUgi;
-
-  private final ScheduledExecutorService mExecutor = Executors.newSingleThreadScheduledExecutor(
-      ThreadFactoryUtils.build("Kerberos user relogin", true));
 
   /**
    * Factory method to constructs a new HDFS {@link UnderFileSystem} instance.
@@ -116,16 +108,6 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
               mUfsConf.getValue(PropertyKey.SECURITY_KERBEROS_PRINCIPAL),
               NetworkAddressUtils.getLocalHostName());
         LOG.info("Construct a new HDFS UnderFileSystem");
-        mExecutor.scheduleAtFixedRate(new Runnable() {
-          @Override
-          public void run() {
-            try {
-              reloginIfNecessary();
-            } catch (IOException e) {
-              LOG.info("Relogin failed.");
-            }
-          }
-        }, Constants.SECOND_MS, 300000, TimeUnit.MILLISECONDS);
       }
       mUgi = UserGroupInformation.getCurrentUser();
       LOG.info("Connecting HDFS, from user {} ", mUgi.getUserName());
@@ -214,6 +196,7 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
 
   @Override
   public OutputStream createDirect(String path, CreateOptions options) throws IOException {
+    reloginIfNecessary();
     IOException te = null;
     RetryPolicy retryPolicy = new CountingRetry(MAX_TRY);
     final String p = path;
@@ -252,11 +235,13 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
 
   @Override
   public boolean exists(String path) throws IOException {
+    reloginIfNecessary();
     return mFileSystem.exists(new Path(path));
   }
 
   @Override
   public long getBlockSizeByte(String path) throws IOException {
+    reloginIfNecessary();
     Path tPath = new Path(path);
     if (!mFileSystem.exists(tPath)) {
       throw new FileNotFoundException(path);
@@ -267,6 +252,7 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
 
   @Override
   public UfsDirectoryStatus getDirectoryStatus(String path) throws IOException {
+    reloginIfNecessary();
     Path tPath = new Path(path);
     FileStatus fs = mFileSystem.getFileStatus(tPath);
     return new UfsDirectoryStatus(path, fs.getOwner(), fs.getGroup(), fs.getPermission().toShort());
@@ -285,6 +271,7 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
     if (Boolean.valueOf(mUfsConf.getValue(PropertyKey.UNDERFS_HDFS_REMOTE))) {
       return null;
     }
+    reloginIfNecessary();
     List<String> ret = new ArrayList<>();
     try {
       FileStatus fStatus = mFileSystem.getFileStatus(new Path(path));
@@ -302,6 +289,7 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
 
   @Override
   public UfsFileStatus getFileStatus(String path) throws IOException {
+    reloginIfNecessary();
     Path tPath = new Path(path);
     FileStatus fs = mFileSystem.getFileStatus(tPath);
     return new UfsFileStatus(path, fs.getLen(), fs.getModificationTime(), fs.getOwner(),
@@ -310,6 +298,7 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
 
   @Override
   public long getSpace(String path, SpaceType type) throws IOException {
+    reloginIfNecessary();
     // Ignoring the path given, will give information for entire cluster
     // as Alluxio can load/store data out of entire HDFS cluster
     if (mFileSystem instanceof DistributedFileSystem) {
@@ -335,11 +324,13 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
 
   @Override
   public boolean isDirectory(String path) throws IOException {
+    reloginIfNecessary();
     return mFileSystem.isDirectory(new Path(path));
   }
 
   @Override
   public boolean isFile(String path) throws IOException {
+    reloginIfNecessary();
     return mFileSystem.isFile(new Path(path));
   }
 
@@ -391,6 +382,7 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
 
   @Override
   public boolean mkdirs(String path, MkdirsOptions options) throws IOException {
+    reloginIfNecessary();
     IOException te = null;
     RetryPolicy retryPolicy = new CountingRetry(MAX_TRY);
     while (retryPolicy.attemptRetry()) {
@@ -436,12 +428,12 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
 
   @Override
   public InputStream open(String path, OpenOptions options) throws IOException {
+    reloginIfNecessary();
     IOException te = null;
     RetryPolicy retryPolicy = new CountingRetry(MAX_TRY);
     final String p = path;
     while (retryPolicy.attemptRetry()) {
       try {
-        reloginIfNecessary();
         FSDataInputStream inputStream = mUgi.doAs(
             new PrivilegedExceptionAction<FSDataInputStream>() {
               @Override
@@ -488,6 +480,7 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
 
   @Override
   public void setOwner(String path, String user, String group) throws IOException {
+    reloginIfNecessary();
     try {
       FileStatus fileStatus = mFileSystem.getFileStatus(new Path(path));
       mFileSystem.setOwner(fileStatus.getPath(), user, group);
@@ -507,6 +500,7 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
 
   @Override
   public void setMode(String path, short mode) throws IOException {
+    reloginIfNecessary();
     try {
       FileStatus fileStatus = mFileSystem.getFileStatus(new Path(path));
       mFileSystem.setPermission(fileStatus.getPath(), new FsPermission(mode));
@@ -529,6 +523,7 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
    * @return true, if succeed
    */
   private boolean delete(String path, boolean recursive) throws IOException {
+    reloginIfNecessary();
     IOException te = null;
     RetryPolicy retryPolicy = new CountingRetry(MAX_TRY);
     while (retryPolicy.attemptRetry()) {
@@ -550,6 +545,7 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
    * @return {@code null} if the path is not a directory
    */
   private FileStatus[] listStatusInternal(String path) throws IOException {
+    reloginIfNecessary();
     FileStatus[] files;
     try {
       files = mFileSystem.listStatus(new Path(path));
@@ -571,6 +567,7 @@ public class HdfsUnderFileSystem extends BaseUnderFileSystem
    * @return true if rename succeeds
    */
   private boolean rename(String src, String dst) throws IOException {
+    reloginIfNecessary();
     IOException te = null;
     RetryPolicy retryPolicy = new CountingRetry(MAX_TRY);
     while (retryPolicy.attemptRetry()) {
