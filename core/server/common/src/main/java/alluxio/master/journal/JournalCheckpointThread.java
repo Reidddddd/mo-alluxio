@@ -186,7 +186,9 @@ public final class JournalCheckpointThread extends Thread {
           CommonUtils.sleepMs(LOG, mShutdownQuietWaitTimeMs);
           quietPeriodWaited = true;
         } else {
-          LOG.info("No entry is found, sleep for {} ms.", mJournalCheckpointSleepTimeMs);
+          LOG.info("No entry is found in {}, sleep for {} ms.",
+                   mMaster.getName(),
+                   mJournalCheckpointSleepTimeMs);
           CommonUtils.sleepMs(LOG, mJournalCheckpointSleepTimeMs);
         }
       }
@@ -201,23 +203,27 @@ public final class JournalCheckpointThread extends Thread {
       return;
     }
     long nextSequenceNumber = mJournalReader.getNextSequenceNumber();
-    LOG.info("Next seq number: {}", nextSequenceNumber);
-    LOG.info("Last chkp number: {}", mNextSequenceNumberToCheckpoint);
+    LOG.info("Next seq number in {}: {}", mMaster.getName(), nextSequenceNumber);
+    LOG.info("Last chkp number in {}: {}", mMaster.getName(), mNextSequenceNumberToCheckpoint);
     if (nextSequenceNumber - mNextSequenceNumberToCheckpoint < mCheckpointPeriodEntries) {
-      LOG.info("No need to checkpoint, for the gap is {} which less than {}.",
+      LOG.info("No need to checkpoint in {}, for the gap is {} which less than {}.",
+               mMaster.getName(),
                nextSequenceNumber - mNextSequenceNumberToCheckpoint, mCheckpointPeriodEntries);
       return;
     }
     try {
       mNextSequenceNumberToCheckpoint = mJournal.getNextSequenceNumberToCheckpoint();
-      LOG.info("Should chkp number: {} to be checkpointed", mNextSequenceNumberToCheckpoint);
+      LOG.info("Should chkp number in {}: {} to be checkpointed",
+               mMaster.getName(),
+               mNextSequenceNumberToCheckpoint);
     } catch (IOException e) {
       LOG.warn("{}: Failed to get the next sequence number to checkpoint with error {}.",
           mMaster.getName(), e.getMessage());
       return;
     }
     if (nextSequenceNumber - mNextSequenceNumberToCheckpoint < mCheckpointPeriodEntries) {
-      LOG.info("No need to checkpoint, for the gap is {} which less than {}.",
+      LOG.info("No need to checkpoint in {}, for the gap is {} which less than {}.",
+               mMaster.getName(),
                nextSequenceNumber - mNextSequenceNumberToCheckpoint, mCheckpointPeriodEntries);
       return;
     }
